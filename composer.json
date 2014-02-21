@@ -1,0 +1,25 @@
+{
+    "name": "novatek/ssh",
+    "type": "library",
+    "description": "Interactive SSH2 Suite",
+    "autoload": {
+        "psr-0": { "": "src/" }
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "psr/log": "~1.0",
+        "ext-ssh2": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=3.7.0"
+    },
+    "scripts": {
+        "post-install-cmd": [
+        ],
+        "post-update-cmd": [
+        ]
+    },
+    "config": {
+        "bin-dir": "bin"
+    }
+}
