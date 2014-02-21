@@ -1,12 +1,14 @@
 <?php
 namespace SSH;
 
+use Logger;
 use NovaTek\Component\SSH\Connection;
 use NovaTek\Component\SSH\Credentials\PasswordCredential;
+use NovaTek\Component\SSH\Exceptions\NotConnectedException;
 
 class ConnectionTest extends \PHPUnit_Framework_TestCase
 {
-    const NEW_HOST = '127.0.0.1';
+    const NEW_HOST     = '127.0.0.1';
     const DEFAULT_HOST = 'localhost';
     const DEFAULT_PORT = 22;
 
@@ -33,7 +35,24 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(self::NEW_HOST, $connection->getHost());
         $this->assertSame(2121, $connection->getPort());
         $this->assertTrue($connection->getCredentials() instanceof PasswordCredential);
-
     }
+
+    /**
+     * @small
+     */
+    public function testLogger()
+    {
+        $logger     = new Logger();
+        $connection = new Connection(self::DEFAULT_HOST);
+        $connection->setLogger($logger);
+
+        try {
+            $connection->authenticate(); // will fail - not connected
+        } catch (NotConnectedException $e) { }
+
+        $this->assertEquals("error: Cannot authenticate - not connected\n", $logger->getHistory());
+    }
+
+
 }
  

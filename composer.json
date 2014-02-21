@@ -1,7 +1,8 @@
 {
     "name": "novatek/ssh",
     "type": "library",
-    "description": "Interactive SSH2 Suite",
+    "description": "Interactive SSH2 suite",
+    "keywords": ["ssh", "ssh2"],
     "autoload": {
         "psr-0": { "": "src/" }
     },
