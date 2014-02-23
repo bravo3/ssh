@@ -1,7 +1,7 @@
 <?php
 namespace SSH\Credentials;
 
-use NovaTek\Component\SSH\Credentials\PasswordCredential;
+use NovaTek\SSH\Credentials\PasswordCredential;
 
 class PasswordCredentialTest extends \PHPUnit_Framework_TestCase
 {

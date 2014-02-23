@@ -2,9 +2,9 @@
 namespace SSH;
 
 use Logger;
-use NovaTek\Component\SSH\Connection;
-use NovaTek\Component\SSH\Credentials\PasswordCredential;
-use NovaTek\Component\SSH\Exceptions\NotConnectedException;
+use NovaTek\SSH\Connection;
+use NovaTek\SSH\Credentials\PasswordCredential;
+use NovaTek\SSH\Exceptions\NotConnectedException;
 
 class ConnectionTest extends \PHPUnit_Framework_TestCase
 {

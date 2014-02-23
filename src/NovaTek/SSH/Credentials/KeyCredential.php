@@ -1,8 +1,8 @@
 <?php
-namespace NovaTek\Component\SSH\Credentials;
+namespace NovaTek\SSH\Credentials;
 
-use NovaTek\Component\SSH\Exceptions\FileNotExistsException;
-use NovaTek\Component\SSH\Exceptions\FileNotReadableException;
+use NovaTek\SSH\Exceptions\FileNotExistsException;
+use NovaTek\SSH\Exceptions\FileNotReadableException;
 
 class KeyCredential extends SSHCredential
 {

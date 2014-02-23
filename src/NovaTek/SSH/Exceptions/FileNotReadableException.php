@@ -1,7 +1,7 @@
 <?php
-namespace NovaTek\Component\SSH\Exceptions;
+namespace NovaTek\SSH\Exceptions;
 
-class FileNotReadableException extends \Exception
+class FileNotReadableException extends SSHException
 {
     /**
      * @var string

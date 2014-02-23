@@ -1,7 +1,7 @@
 <?php
 namespace SSH\Credentials;
 
-use NovaTek\Component\SSH\Credentials\KeyCredential;
+use NovaTek\SSH\Credentials\KeyCredential;
 
 class KeyCredentialTest extends \PHPUnit_Framework_TestCase
 {
@@ -52,7 +52,7 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
     /**
      * @small
      * @dataProvider keyFileNotExistsProvider
-     * @expectedException \NovaTek\Component\SSH\Exceptions\FileNotExistsException
+     * @expectedException \NovaTek\SSH\Exceptions\FileNotExistsException
      */
     public function testInvalidFile($public, $private, $password)
     {

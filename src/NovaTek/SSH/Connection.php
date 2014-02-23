@@ -1,8 +1,8 @@
 <?php
-namespace NovaTek\Component\SSH;
+namespace NovaTek\SSH;
 
-use NovaTek\Component\SSH\Credentials\SSHCredential;
-use NovaTek\Component\SSH\Exceptions\NotConnectedException;
+use NovaTek\SSH\Credentials\SSHCredential;
+use NovaTek\SSH\Exceptions\NotConnectedException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -108,7 +108,7 @@ class Connection implements LoggerAwareInterface
     /**
      * Set Credentials
      *
-     * @param \NovaTek\Component\SSH\Credentials\SSHCredential $credentials
+     * @param \NovaTek\SSH\Credentials\SSHCredential $credentials
      * @return Connection
      */
     public function setCredentials($credentials)
@@ -120,7 +120,7 @@ class Connection implements LoggerAwareInterface
     /**
      * Get Credentials
      *
-     * @return \NovaTek\Component\SSH\Credentials\SSHCredential
+     * @return \NovaTek\SSH\Credentials\SSHCredential
      */
     public function getCredentials()
     {

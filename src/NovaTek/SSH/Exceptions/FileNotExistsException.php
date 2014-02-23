@@ -1,7 +1,7 @@
 <?php
-namespace NovaTek\Component\SSH\Exceptions;
+namespace NovaTek\SSH\Exceptions;
 
-class FileNotExistsException extends \Exception
+class FileNotExistsException extends SSHException
 {
     /**
      * @var string

@@ -1,7 +1,7 @@
 <?php
 namespace SSH\Exceptions;
 
-use NovaTek\Component\SSH\Exceptions\FileNotExistsException;
+use NovaTek\SSH\Exceptions\FileNotExistsException;
 
 class FileNotExistsExceptionTest extends \PHPUnit_Framework_TestCase
 {

@@ -1,5 +1,5 @@
 <?php
-namespace NovaTek\Component\SSH\Credentials;
+namespace NovaTek\SSH\Credentials;
 
 class PasswordCredential extends SSHCredential
 {
