@@ -31,6 +31,12 @@ abstract class SSHCredential
         return $this->username;
     }
 
-
+    /**
+     * Authenticate against a given resource
+     *
+     * @param mixed $resource
+     * @return bool
+     */
+    abstract public function authenticate($resource);
 
 } 

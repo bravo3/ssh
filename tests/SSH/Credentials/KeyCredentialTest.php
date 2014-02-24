@@ -1,6 +1,7 @@
 <?php
 namespace SSH\Credentials;
 
+use NovaTek\SSH\Connection;
 use NovaTek\SSH\Credentials\KeyCredential;
 
 class KeyCredentialTest extends \PHPUnit_Framework_TestCase
@@ -8,6 +9,8 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
     const DEFAULT_USER = 'root';
     const NEW_USER = 'username';
     const KEYFILE_PASSWORD = 'password';
+    const MISSING_FILE = 'a.missing.file';
+    const FAKE_FILE = '/../../resources/not-a-file.pem';
 
 
     /**
@@ -51,11 +54,39 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @small
-     * @dataProvider keyFileNotExistsProvider
+     * @dataProvider keyFileProvider
      * @expectedException \NovaTek\SSH\Exceptions\FileNotExistsException
      */
-    public function testInvalidFile($public, $private, $password)
+    public function testInvalidKey($public, $private, $password)
     {
+        static $run = 0;
+
+        if ($run++ % 2 == 0) {
+            $public = self::MISSING_FILE;
+        } else {
+            $private = self::MISSING_FILE;
+        }
+
+        $credentials = new KeyCredential();
+        $credentials->setKeyPair($public, $private, $password);
+        $this->fail();
+    }
+
+    /**
+     * @small
+     * @dataProvider keyFileProvider
+     * @expectedException \NovaTek\SSH\Exceptions\FileNotReadableException
+     */
+    public function testUnreadableKey($public, $private, $password)
+    {
+        static $run = 0;
+
+        if ($run++ % 2 == 0) {
+            $public = __DIR__.self::FAKE_FILE;
+        } else {
+            $private = __DIR__.self::FAKE_FILE;
+        }
+
         $credentials = new KeyCredential();
         $credentials->setKeyPair($public, $private, $password);
         $this->fail();
@@ -78,19 +109,21 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
         ];
     }
 
+
     /**
-     * Data Provider
-     * Return an array of files that do not exist :)
-     *
-     * @return string[]
+     * @dataProvider keyFileProvider
+     * @group server
+     * @medium
      */
-    public function keyFileNotExistsProvider()
+    public function testKeyAuthentication($public, $private, $password)
     {
-        $base = __DIR__.'/../../resources/';
-        return [
-            [$base.'invalid.pem.pub', $base.'invalid.pem', null],
-        ];
+        $connection = new Connection(\properties::$host, \properties::$port, new KeyCredential(\properties::$user, $public, $private, $password));
+        $this->assertTrue($connection->connect());
+        $this->assertTrue($connection->authenticate());
+        $this->assertTrue($connection->isAuthenticated());
+        $connection->disconnect();
     }
+
 
 }
  

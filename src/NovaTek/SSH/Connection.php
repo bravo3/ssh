@@ -37,6 +37,11 @@ class Connection implements LoggerAwareInterface
      */
     protected $resource;
 
+    /**
+     * @var bool
+     */
+    protected $authenticated = false;
+
     function __construct($host, $port = 22, SSHCredential $credentials = null)
     {
         $this->host        = $host;
@@ -48,40 +53,84 @@ class Connection implements LoggerAwareInterface
     /**
      * Connect to the SSH host
      *
+     * @param string $fingerprint Optional - disconnect if there is a fingerprint mismatch
      * @return bool
      */
-    public function connect()
+    public function connect($fingerprint = null)
     {
-        if ($this->isConnected()) $this->disconnect();
+        if ($this->isConnected()) {
+            $this->disconnect();
+        }
 
-        return false;
+        $this->resource = @ssh2_connect($this->getHost(), $this->getPort());
+
+        // Check connection was a success
+        if ($this->resource === false) {
+            $this->disconnect();
+            return false;
+        }
+
+        $this->log(LogLevel::INFO, "Connected to ".$this->getHost().":".$this->getPort());
+
+        // Check fingerprint if provided
+        if ($fingerprint && !$this->checkFingerprint($fingerprint)) {
+            $this->log(LogLevel::WARNING, "Fingerprint mismatch");
+            $this->disconnect();
+            return false;
+        }
+
+        // All good
+        $this->authenticated = false;
+        return true;
     }
 
 
     /**
-     * Disconnect from a server
+     * Disconnect from a server and reset the connection state
      *
      * Will not throw an exception if there is no connection
      */
     public function disconnect()
     {
-
         $this->resource = null;
+        $this->authenticated = false;
+        $this->log(LogLevel::INFO, "Disconnected");
     }
 
     /**
      * Get the server SSH fingerprint
      *
+     * @see ssh2_fingerprint()
+     * @param int $flags Equiv ssh2_fingerprint() flags
+     * @throws Exceptions\NotConnectedException
      * @return string
-     * @throws NotConnectedException
      */
-    public function getFingerprint()
+    public function getFingerprint($flags = null)
     {
+        if ($flags === null) {
+            // Default flags of the ssh2_fingerprint function, matches format of the known_hosts file
+            $flags = SSH2_FINGERPRINT_MD5 | SSH2_FINGERPRINT_HEX;
+        }
+
         if (!$this->isConnected()) {
             $this->log(LogLevel::ERROR, "Cannot get fingerprint - not connected");
             throw new NotConnectedException();
         }
-        return '';
+
+        return ssh2_fingerprint($this->resource, $flags);
+    }
+
+
+    /**
+     * Test the server fingerprint matches
+     *
+     * @param string $fingerprint
+     * @return bool
+     * @throws NotConnectedException
+     */
+    public function checkFingerprint($fingerprint)
+    {
+        return $this->getFingerprint() === $fingerprint;
     }
 
     /**
@@ -96,9 +145,9 @@ class Connection implements LoggerAwareInterface
             $this->log(LogLevel::ERROR, "Cannot authenticate - not connected");
             throw new NotConnectedException();
         }
-        return false;
-    }
 
+        return $this->authenticated = $this->getCredentials()->authenticate($this->resource);
+    }
 
 
 
@@ -199,10 +248,33 @@ class Connection implements LoggerAwareInterface
      * @param string $message
      * @param array  $context
      */
-    public function log($level = LogLevel::INFO, $message, array $context = array())
+    public function log($level, $message, array $context = array())
     {
-        if (!$this->logger) return;
+        if (!$this->logger) {
+            return;
+        }
         $this->logger->log($level, $message, $context);
     }
+
+    /**
+     * Get the session resource
+     *
+     * @return string
+     */
+    public function getResource()
+    {
+        return $this->resource;
+    }
+
+    /**
+     * Check if the current connection has passed authentication
+     *
+     * @return boolean
+     */
+    public function isAuthenticated()
+    {
+        return $this->authenticated;
+    }
+
 
 }

@@ -12,9 +12,8 @@ class PasswordCredential extends SSHCredential
     function __construct($username = 'root', $password = null)
     {
         $this->setUsername($username);
-        $this->password = $password;
+        $this->setPassword($password);
     }
-
 
     /**
      * Set Password
@@ -38,6 +37,16 @@ class PasswordCredential extends SSHCredential
         return $this->password;
     }
 
+    /**
+     * Authenticate against a given resource
+     *
+     * @param mixed $resource
+     * @return bool
+     */
+    public function authenticate($resource)
+    {
+        return ssh2_auth_password($resource, $this->getUsername(), $this->getPassword());
+    }
 
 
-} 
+}

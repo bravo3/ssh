@@ -1,13 +1,14 @@
 <?php
 namespace SSH\Credentials;
 
+use NovaTek\SSH\Connection;
 use NovaTek\SSH\Credentials\PasswordCredential;
 
 class PasswordCredentialTest extends \PHPUnit_Framework_TestCase
 {
 
-    const NEW_USERNAME = 'username';
-    const NEW_PASSWORD = 'password';
+    const NEW_USERNAME     = 'username';
+    const NEW_PASSWORD     = 'password';
     const DEFAULT_USERNAME = 'root';
 
     public function testProperties()
@@ -25,5 +26,19 @@ class PasswordCredentialTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(self::NEW_USERNAME, $credential->getUsername());
         $this->assertEquals(self::NEW_PASSWORD, $credential->getPassword());
     }
+
+    /**
+     * @group server
+     * @medium
+     */
+    public function testPasswordAuthentication()
+    {
+        $connection = new Connection(\properties::$host, \properties::$port, new PasswordCredential(\properties::$user, \properties::$pass));
+        $this->assertTrue($connection->connect());
+        $this->assertTrue($connection->authenticate());
+        $this->assertTrue($connection->isAuthenticated());
+        $connection->disconnect();
+    }
+
 }
  

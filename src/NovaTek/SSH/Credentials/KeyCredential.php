@@ -22,10 +22,19 @@ class KeyCredential extends SSHCredential
      */
     protected $password;
 
-    function __construct($username = 'root', $key = null)
+    function __construct($username = 'root', $public_key = null, $private_key = null, $password = null)
     {
         $this->setUsername($username);
-        $this->private_key = $key;
+
+        if ($public_key) {
+            $this->setPublicKey($public_key);
+        }
+
+        if ($private_key) {
+            $this->setPrivateKey($private_key);
+        }
+        
+        $this->setPassword($password);
     }
 
 
@@ -34,9 +43,19 @@ class KeyCredential extends SSHCredential
      *
      * @param string $public_key
      * @return KeyCredential
+     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
+     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
      */
     public function setPublicKey($public_key)
     {
+        // Check file is readable
+        if (!file_exists($public_key)) {
+            throw new FileNotExistsException($public_key);
+        }
+        if (!is_readable($public_key) || is_dir($public_key)) {
+            throw new FileNotReadableException($public_key);
+        }
+
         $this->public_key = $public_key;
         return $this;
     }
@@ -56,9 +75,19 @@ class KeyCredential extends SSHCredential
      *
      * @param string $private_key
      * @return KeyCredential
+     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
+     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
      */
     public function setPrivateKey($private_key)
     {
+        // Check file is readable
+        if (!file_exists($private_key)) {
+            throw new FileNotExistsException($private_key);
+        }
+        if (!is_readable($private_key) || is_dir($private_key)) {
+            throw new FileNotReadableException($private_key);
+        }
+
         $this->private_key = $private_key;
         return $this;
     }
@@ -98,21 +127,34 @@ class KeyCredential extends SSHCredential
     /**
      * Load the SSH key from a keyfile
      *
-     * @param $fn
+     * @param string $public
+     * @param string $private
+     * @param string $password
+     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
+     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
      */
     public function setKeyPair($public, $private, $password = null)
     {
-        $this->password = $password;
-
-        if (!file_exists($public)) throw new FileNotExistsException($public);
-        if (!is_readable($public)) throw new FileNotReadableException($public);
-
-        if (!file_exists($private)) throw new FileNotExistsException($private);
-        if (!is_readable($private)) throw new FileNotReadableException($private);
-
         $this->setPublicKey($public);
         $this->setPrivateKey($private);
         $this->setPassword($password);
+    }
+
+    /**
+     * Authenticate against a given resource
+     *
+     * @param mixed $resource
+     * @return bool
+     */
+    public function authenticate($resource)
+    {
+        return ssh2_auth_pubkey_file(
+            $resource,
+            $this->getUsername(),
+            $this->getPublicKey(),
+            $this->getPrivateKey(),
+            $this->getPassword()
+        );
     }
 
 
