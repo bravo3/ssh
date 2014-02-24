@@ -3,6 +3,7 @@ namespace NovaTek\SSH;
 
 use NovaTek\SSH\Exceptions\NotAuthenticatedException;
 use NovaTek\SSH\Exceptions\NotConnectedException;
+use NovaTek\SSH\Exceptions\StreamNotOpenException;
 
 class ExecutionStream
 {
@@ -26,6 +27,11 @@ class ExecutionStream
      * @var mixed
      */
     protected $resource;
+
+    /**
+     * @var bool
+     */
+    protected $open = true;
 
     /**
      * Execute a command create a new execution stream
@@ -60,27 +66,63 @@ class ExecutionStream
         );
     }
 
-
     /**
-     * Get the complete output from the command
+     * Get the 'stdout' output from the command execution
      *
      * @return string
      */
     public function getOutput()
     {
-        $this->setBlocking(true);   // important
+        $this->close();
+        stream_set_blocking($this->resource, true);
         return stream_get_contents($this->resource);
     }
 
+    /**
+     * Get the complete output from the command, separating stdout and stderr
+     *
+     * Returns an associative array:
+     * ['stdout' => string, 'stderr' => string]
+     *
+     * @return string[]
+     */
+    public function getSegmentedOutput()
+    {
+        $this->close();
+
+        $stderr = ssh2_fetch_stream($this->resource, SSH2_STREAM_STDERR);
+
+        stream_set_blocking($this->resource, true);
+        stream_set_blocking($stderr, true);
+
+        $out = stream_get_contents($this->resource);
+        $err = stream_get_contents($stderr);
+
+        return ['stdout' => $out, 'stderr' => $err];
+    }
 
     /**
-     * Set the stream blocking
+     * Checks if we are still able to receive output - this closes once the command output has been received
      *
-     * @param bool $block
+     * @return boolean
      */
-    public function setBlocking($block)
+    public function isOpen()
     {
-        stream_set_blocking($this->resource, (bool)$block);
+        return $this->open;
+    }
+
+    /**
+     * We've completed the transaction, forbid additional requests for output
+     *
+     * @throws StreamNotOpenException
+     */
+    protected function close()
+    {
+        if (!$this->open) {
+            throw new StreamNotOpenException('The execution process has already completed');
+        }
+
+        $this->open = false;
     }
 
 } 
