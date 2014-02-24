@@ -33,7 +33,7 @@ class KeyCredential extends SSHCredential
         if ($private_key) {
             $this->setPrivateKey($private_key);
         }
-        
+
         $this->setPassword($password);
     }
 

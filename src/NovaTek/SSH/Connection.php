@@ -33,7 +33,7 @@ class Connection implements LoggerAwareInterface
     /**
      * The SSH session resource, if this is non-null it represents the connection is live
      *
-     * @var string
+     * @var mixed
      */
     protected $resource;
 
@@ -92,7 +92,7 @@ class Connection implements LoggerAwareInterface
      */
     public function disconnect()
     {
-        $this->resource = null;
+        $this->resource      = null;
         $this->authenticated = false;
         $this->log(LogLevel::INFO, "Disconnected");
     }
@@ -150,6 +150,37 @@ class Connection implements LoggerAwareInterface
     }
 
 
+    /**
+     * Execute a command on the SSH server
+     *
+     * @param string   $command
+     * @param Terminal $terminal
+     * @param string   $pty
+     * @return ExecutionStream
+     */
+    public function execute($command, Terminal $terminal = null, $pty = null)
+    {
+        if ($terminal === null) {
+            $terminal = new Terminal();
+        }
+
+        return new ExecutionStream($command, $this, $terminal, $pty);
+    }
+
+    /**
+     * Get an interactive shell
+     *
+     * @param null $terminal
+     * @return Shell
+     */
+    public function getShell($terminal = null)
+    {
+        if ($terminal === null) {
+            $terminal = new Terminal();
+        }
+
+        return new Shell();
+    }
 
 
     // --
@@ -259,7 +290,7 @@ class Connection implements LoggerAwareInterface
     /**
      * Get the session resource
      *
-     * @return string
+     * @return mixed
      */
     public function getResource()
     {
