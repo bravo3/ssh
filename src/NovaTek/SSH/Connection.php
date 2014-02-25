@@ -2,6 +2,7 @@
 namespace NovaTek\SSH;
 
 use NovaTek\SSH\Credentials\SSHCredential;
+use NovaTek\SSH\Exceptions\FingerprintMismatchException;
 use NovaTek\SSH\Exceptions\NotConnectedException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -66,6 +67,7 @@ class Connection implements LoggerAwareInterface
 
         // Check connection was a success
         if ($this->resource === false) {
+            $this->log(LogLevel::ERROR, "Connection error");
             $this->disconnect();
             return false;
         }
@@ -76,7 +78,7 @@ class Connection implements LoggerAwareInterface
         if ($fingerprint && !$this->checkFingerprint($fingerprint)) {
             $this->log(LogLevel::WARNING, "Fingerprint mismatch");
             $this->disconnect();
-            return false;
+            throw new FingerprintMismatchException();
         }
 
         // All good

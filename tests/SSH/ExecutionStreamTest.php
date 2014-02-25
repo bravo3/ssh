@@ -39,6 +39,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      * @expectedException \NovaTek\SSH\Exceptions\NotAuthenticatedException
+     * @group server
      */
     public function testNoAuth()
     {
@@ -52,6 +53,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @group server
      */
     public function testOutput()
     {
@@ -63,6 +65,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @group server
      */
     public function testOutputWithError()
     {
@@ -78,6 +81,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @group server
      */
     public function testSegmentedOutput()
     {
@@ -95,6 +99,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      * @expectedException \NovaTek\SSH\Exceptions\StreamNotOpenException
+     * @group server
      */
     public function testDoubleRead()
     {
@@ -111,6 +116,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @group server
      */
     public function testMultipleExecutions()
     {
@@ -127,6 +133,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @group server
      */
     public function testMultipleExecutionsWithoutReading()
     {
@@ -146,6 +153,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      * @expectedException \NovaTek\SSH\Exceptions\NotConnectedException
+     * @group server
      */
     public function testDisconnectionBetweenExecutions()
     {

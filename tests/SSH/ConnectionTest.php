@@ -4,13 +4,14 @@ namespace SSH;
 use Logger;
 use NovaTek\SSH\Connection;
 use NovaTek\SSH\Credentials\PasswordCredential;
+use NovaTek\SSH\Exceptions\FingerprintMismatchException;
 use NovaTek\SSH\Exceptions\NotConnectedException;
 
 class ConnectionTest extends \PHPUnit_Framework_TestCase
 {
-    const NEW_HOST     = '127.0.0.1';
-    const DEFAULT_HOST = 'localhost';
-    const DEFAULT_PORT = 22;
+    const NEW_HOST        = '127.0.0.1';
+    const DEFAULT_HOST    = 'localhost';
+    const DEFAULT_PORT    = 22;
     const BAD_FINGERPRINT = 'complete-rubbish-that-isnt-a-fingerprint';
 
     /**
@@ -113,15 +114,19 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $connection = new Connection(\properties::$host, \properties::$port);
         $connection->setLogger($logger);
 
-        $this->assertFalse($connection->connect(self::BAD_FINGERPRINT));
+        $caught = false;
+        try {
+            $connection->connect(self::BAD_FINGERPRINT);
+        } catch (FingerprintMismatchException $e) {
+            $caught = true;
+        }
 
+        $this->assertTrue($caught);
         $this->assertContains('Fingerprint mismatch', $logger->getHistory());
         $this->assertContains('Disconnected', $logger->getHistory());
 
         $this->assertFalse($connection->isConnected());
-
     }
-
 
     /**
      * @small
@@ -133,6 +138,9 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $connection->getFingerprint();
     }
 
+    /**
+     * @small
+     */
     public function testBadConnection()
     {
         $logger     = new Logger();
