@@ -8,9 +8,11 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
+/**
+ * A connection to an SSH server
+ */
 class Connection implements LoggerAwareInterface
 {
-
     /**
      * @var string
      */
@@ -181,7 +183,7 @@ class Connection implements LoggerAwareInterface
             $terminal = new Terminal();
         }
 
-        return new Shell();
+        return new Shell($this, $terminal);
     }
 
 

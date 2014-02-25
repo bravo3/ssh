@@ -5,6 +5,9 @@ use NovaTek\SSH\Exceptions\NotAuthenticatedException;
 use NovaTek\SSH\Exceptions\NotConnectedException;
 use NovaTek\SSH\Exceptions\StreamNotOpenException;
 
+/**
+ * Created by an SSH exec call, this class allows you to read the response
+ */
 class ExecutionStream
 {
 
@@ -34,7 +37,7 @@ class ExecutionStream
     protected $open = true;
 
     /**
-     * Execute a command create a new execution stream
+     * Typically called from Connection::execute()
      *
      * @param string     $command
      * @param Connection $connection

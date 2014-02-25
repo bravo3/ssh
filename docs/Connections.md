@@ -20,7 +20,15 @@ Once you have a connection ready, you can connect, check fingerprints and authen
 An exception will be raised if the server fingerprint is a mismatch. Once authenticated, you're now able to execute
 commands or request an interactive shell.
 
-See:
+
+PSR-3 Logger Support
+--------------------
+The Connection class implements the PSR-3 LoggerAwareInterface, you may provide a LoggerInterface for the connection
+object to log to.
+
+
+See Also
+--------
 
 * [Executing Commands](ExecutionStream.md)
 * [Interactive Shell](Shell.md)
