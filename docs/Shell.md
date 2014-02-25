@@ -18,7 +18,7 @@ for some initial data, and then for a pause. There is a helper function that doe
     $shell->waitForContent(1.5);    // wait 1.5 seconds before assuming the server is done
     $shell->sendln(..);
 
-    
+
 Smart Commands
 --------------
 By default, a smart command will automatically override the PS1 variable on the server and trim the response -

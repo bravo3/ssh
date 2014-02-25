@@ -2,7 +2,14 @@
     "name": "novatek/ssh",
     "type": "library",
     "description": "Interactive SSH2 suite",
-    "keywords": ["ssh", "ssh2"],
+    "keywords": ["ssh", "ssh2", "shell"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jordon Scott",
+            "email": "jordon@novatek.com.au"
+        }
+    ],
     "autoload": {
         "psr-0": { "": "src/" }
     },
