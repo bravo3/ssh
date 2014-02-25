@@ -33,7 +33,7 @@ Features implemented:
 
 * Password and key-pair authentication
 * Optional fingerprint checking
-* Shell execution
+* Command execution
 * Interactive shell (mimic user)
 
 Notable features not implemented:
