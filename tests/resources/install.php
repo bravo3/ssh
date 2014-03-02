@@ -1,7 +1,6 @@
 #!/usr/bin/env php
 <?php
-
-require_once __DIR__.'/../properties.php';
+require_once __DIR__.'/../bootstrap.php';
 
 /**
  * Install public keys in the current users authorized_hosts file to allow unit tests in '@group server' to run
@@ -23,6 +22,19 @@ class installer
         }
 
         $force = $this->hasOption('-f'); // non-interactive mode
+
+        // Check the user exists
+        if (!file_exists($this->getHomeDir())) {
+            $this->log("User directory does not exist '".$this->getHomeDir()."' - have you created the test user?");
+            $this->log("Add a user `".properties::$user."` with password `".properties::$pass."`");
+            return false;
+        }
+
+        // Check you are root
+        if (trim(`whoami`) != 'root') {
+            $this->log("You need to be root to do this");
+            return false;
+        }
 
         // User confirmation
         if (!$force && !$this->confirm()) {
