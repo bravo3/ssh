@@ -1,5 +1,5 @@
 <?php
-namespace NovaTek\SSH\Credentials;
+namespace Bravo3\SSH\Credentials;
 
 abstract class SSHCredential
 {

@@ -1,8 +1,8 @@
 <?php
-namespace NovaTek\SSH;
+namespace Bravo3\SSH;
 
-use NovaTek\SSH\Enum\TerminalType;
-use NovaTek\SSH\Enum\TerminalUnit;
+use Bravo3\SSH\Enum\TerminalType;
+use Bravo3\SSH\Enum\TerminalUnit;
 
 /**
  * Specifications for a virtual terminal

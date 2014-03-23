@@ -2,10 +2,10 @@
 namespace SSH;
 
 use Logger;
-use NovaTek\SSH\Connection;
-use NovaTek\SSH\Credentials\PasswordCredential;
-use NovaTek\SSH\Exceptions\FingerprintMismatchException;
-use NovaTek\SSH\Exceptions\NotConnectedException;
+use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\Exceptions\FingerprintMismatchException;
+use Bravo3\SSH\Exceptions\NotConnectedException;
 
 class ConnectionTest extends \PHPUnit_Framework_TestCase
 {
@@ -130,7 +130,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @small
-     * @expectedException \NovaTek\SSH\Exceptions\NotConnectedException
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
      */
     public function testOutOfOrderFingerprint()
     {

@@ -1,8 +1,8 @@
 <?php
 namespace SSH\Credentials;
 
-use NovaTek\SSH\Connection;
-use NovaTek\SSH\Credentials\KeyCredential;
+use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\KeyCredential;
 
 class KeyCredentialTest extends \PHPUnit_Framework_TestCase
 {
@@ -55,7 +55,7 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
     /**
      * @small
      * @dataProvider keyFileProvider
-     * @expectedException \NovaTek\SSH\Exceptions\FileNotExistsException
+     * @expectedException \Bravo3\SSH\Exceptions\FileNotExistsException
      */
     public function testInvalidKey($public, $private, $password)
     {
@@ -75,7 +75,7 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
     /**
      * @small
      * @dataProvider keyFileProvider
-     * @expectedException \NovaTek\SSH\Exceptions\FileNotReadableException
+     * @expectedException \Bravo3\SSH\Exceptions\FileNotReadableException
      */
     public function testUnreadableKey($public, $private, $password)
     {

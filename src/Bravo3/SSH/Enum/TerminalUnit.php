@@ -1,5 +1,5 @@
 <?php
-namespace NovaTek\SSH\Enum;
+namespace Bravo3\SSH\Enum;
 
 class TerminalUnit
 {

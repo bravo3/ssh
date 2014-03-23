@@ -1,7 +1,7 @@
 <?php
 namespace SSH\Exceptions;
 
-use NovaTek\SSH\Exceptions\FileNotReadableException;
+use Bravo3\SSH\Exceptions\FileNotReadableException;
 
 class FileNotReadableExceptionTest extends \PHPUnit_Framework_TestCase
 {

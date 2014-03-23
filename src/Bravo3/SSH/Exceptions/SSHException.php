@@ -1,5 +1,5 @@
 <?php
-namespace NovaTek\SSH\Exceptions;
+namespace Bravo3\SSH\Exceptions;
 
 class SSHException extends \Exception
 {

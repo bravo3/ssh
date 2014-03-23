@@ -1,10 +1,10 @@
 <?php
 namespace SSH;
 
-use NovaTek\SSH\Connection;
-use NovaTek\SSH\Credentials\PasswordCredential;
-use NovaTek\SSH\Shell;
-use NovaTek\SSH\Terminal;
+use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\Shell;
+use Bravo3\SSH\Terminal;
 
 class ShellTest extends \PHPUnit_Framework_TestCase
 {
@@ -103,7 +103,7 @@ class ShellTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @expectedException \NovaTek\SSH\Exceptions\NotConnectedException
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
      * @group server
      */
     public function testNotConnected()
@@ -122,7 +122,7 @@ class ShellTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @expectedException \NovaTek\SSH\Exceptions\NotAuthenticatedException
+     * @expectedException \Bravo3\SSH\Exceptions\NotAuthenticatedException
      * @group server
      */
     public function testNoAuth()

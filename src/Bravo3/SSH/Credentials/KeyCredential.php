@@ -1,8 +1,8 @@
 <?php
-namespace NovaTek\SSH\Credentials;
+namespace Bravo3\SSH\Credentials;
 
-use NovaTek\SSH\Exceptions\FileNotExistsException;
-use NovaTek\SSH\Exceptions\FileNotReadableException;
+use Bravo3\SSH\Exceptions\FileNotExistsException;
+use Bravo3\SSH\Exceptions\FileNotReadableException;
 
 class KeyCredential extends SSHCredential
 {
@@ -43,8 +43,8 @@ class KeyCredential extends SSHCredential
      *
      * @param string $public_key
      * @return KeyCredential
-     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
-     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
+     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
+     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
      */
     public function setPublicKey($public_key)
     {
@@ -75,8 +75,8 @@ class KeyCredential extends SSHCredential
      *
      * @param string $private_key
      * @return KeyCredential
-     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
-     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
+     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
+     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
      */
     public function setPrivateKey($private_key)
     {
@@ -130,8 +130,8 @@ class KeyCredential extends SSHCredential
      * @param string $public
      * @param string $private
      * @param string $password
-     * @throws \NovaTek\SSH\Exceptions\FileNotExistsException
-     * @throws \NovaTek\SSH\Exceptions\FileNotReadableException
+     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
+     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
      */
     public function setKeyPair($public, $private, $password = null)
     {

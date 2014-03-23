@@ -1,8 +1,8 @@
 <?php
 namespace SSH\Credentials;
 
-use NovaTek\SSH\Connection;
-use NovaTek\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\PasswordCredential;
 
 class PasswordCredentialTest extends \PHPUnit_Framework_TestCase
 {

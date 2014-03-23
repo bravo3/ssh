@@ -1,10 +1,10 @@
 <?php
 namespace SSH;
 
-use NovaTek\SSH\Connection;
-use NovaTek\SSH\Credentials\PasswordCredential;
-use NovaTek\SSH\ExecutionStream;
-use NovaTek\SSH\Terminal;
+use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\ExecutionStream;
+use Bravo3\SSH\Terminal;
 
 class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 {
@@ -38,7 +38,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @expectedException \NovaTek\SSH\Exceptions\NotAuthenticatedException
+     * @expectedException \Bravo3\SSH\Exceptions\NotAuthenticatedException
      * @group server
      */
     public function testNoAuth()
@@ -98,7 +98,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @expectedException \NovaTek\SSH\Exceptions\StreamNotOpenException
+     * @expectedException \Bravo3\SSH\Exceptions\StreamNotOpenException
      * @group server
      */
     public function testDoubleRead()
@@ -152,7 +152,7 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @expectedException \NovaTek\SSH\Exceptions\NotConnectedException
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
      * @group server
      */
     public function testDisconnectionBetweenExecutions()

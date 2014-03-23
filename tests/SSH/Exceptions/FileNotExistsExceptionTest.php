@@ -1,7 +1,7 @@
 <?php
 namespace SSH\Exceptions;
 
-use NovaTek\SSH\Exceptions\FileNotExistsException;
+use Bravo3\SSH\Exceptions\FileNotExistsException;
 
 class FileNotExistsExceptionTest extends \PHPUnit_Framework_TestCase
 {

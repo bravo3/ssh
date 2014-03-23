@@ -1,9 +1,9 @@
 <?php
 namespace SSH;
 
-use NovaTek\SSH\Enum\TerminalType;
-use NovaTek\SSH\Enum\TerminalUnit;
-use NovaTek\SSH\Terminal;
+use Bravo3\SSH\Enum\TerminalType;
+use Bravo3\SSH\Enum\TerminalUnit;
+use Bravo3\SSH\Terminal;
 
 class TerminalTest extends \PHPUnit_Framework_TestCase
 {

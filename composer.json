@@ -1,7 +1,7 @@
 {
-    "name": "novatek/ssh",
+    "name": "bravo3/ssh",
     "type": "library",
-    "description": "Interactive SSH2 suite",
+    "description": "Interactive SSH2 suite for PHP 5.4",
     "keywords": ["ssh", "ssh2", "shell"],
     "license": "MIT",
     "authors": [

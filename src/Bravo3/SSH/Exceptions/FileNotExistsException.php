@@ -1,7 +1,7 @@
 <?php
-namespace NovaTek\SSH\Exceptions;
+namespace Bravo3\SSH\Exceptions;
 
-class FileNotReadableException extends SSHException
+class FileNotExistsException extends SSHException
 {
     /**
      * @var string
@@ -19,7 +19,7 @@ class FileNotReadableException extends SSHException
     function __construct($filename, $msg = null, $code = 0, \Exception $exception = null)
     {
         $this->filename = $filename;
-        $msg = $msg ?: 'The file "'.$filename.'" is not readable';
+        $msg = $msg ?: 'The file "'.$filename.'" does not exist';
 
         parent::__construct($msg, $code, $exception);
     }

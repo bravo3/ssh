@@ -1,9 +1,9 @@
 <?php
-namespace NovaTek\SSH;
+namespace Bravo3\SSH;
 
-use NovaTek\SSH\Exceptions\NotAuthenticatedException;
-use NovaTek\SSH\Exceptions\NotConnectedException;
-use NovaTek\SSH\Exceptions\StreamNotOpenException;
+use Bravo3\SSH\Exceptions\NotAuthenticatedException;
+use Bravo3\SSH\Exceptions\NotConnectedException;
+use Bravo3\SSH\Exceptions\StreamNotOpenException;
 
 /**
  * Created by an SSH exec call, this class allows you to read the response
