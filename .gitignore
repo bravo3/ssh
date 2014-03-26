@@ -1,5 +1,4 @@
 !.gitkeep
-.idea
 /vendor/
 /bin/
 /coverage/
