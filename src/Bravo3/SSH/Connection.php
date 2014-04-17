@@ -187,6 +187,33 @@ class Connection implements LoggerAwareInterface
     }
 
 
+    /**
+     * Send a file to the server via SCP
+     *
+     * @param string $local  Filename of local file
+     * @param string $remote Filename for the destination file
+     * @param int    $create_mode
+     * @return boolean
+     */
+    public function scpSend($local, $remote, $create_mode = 0644)
+    {
+
+    }
+
+    /**
+     * Send a file to the server via SCP
+     *
+     * @param string $remote Filename of the source file on the remote
+     * @param string $local  Filename for the destination on the local machine
+     * @param int    $create_mode
+     * @return boolean
+     */
+    public function scpReceive($remote, $local)
+    {
+
+    }
+
+
     // --
 
     /**
