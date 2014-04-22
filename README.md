@@ -13,9 +13,12 @@ This project requires PHP-SSH2, which can be installed with `pecl`:
     pecl install -f ssh2
     echo "extension=ssh2.so" > /etc/php.d/ssh2.ini
 
-Connections
-===========
-See [Connections](docs/Connections.md)
+Usage
+=====
+* [Connections](docs/Connections.md)
+* [Command Execution](docs/ExecutionStream.md)
+* [Interactive Shell](docs/Shell.md)
+* [Transfers](docs/Transfers.md)
 
 Known Bugs/Limitations
 ======================
@@ -29,15 +32,16 @@ key files running in Ubuntu/Debian:
 
 Limitations
 -----------
-Features implemented:
+#### Features implemented:
 
 * Password and key-pair authentication
 * Optional fingerprint checking
 * Command execution
 * Interactive shell (mimic user)
+* SCP transfers
 
-Notable features not implemented:
+#### Notable features not implemented:
 
 * Agent and host authentication
-* SCP/SFTP transfers
+* SFTP transfers
 * Tunnels
