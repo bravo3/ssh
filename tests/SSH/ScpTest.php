@@ -36,7 +36,7 @@ class ScpTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
-     * @group server
+     * @group        server
      * @dataProvider testFiles
      */
     public function testSendRec($fn)
@@ -44,16 +44,82 @@ class ScpTest extends \PHPUnit_Framework_TestCase
         $connection = $this->getConnection();
 
         // Test send
-        $connection->scpSend(__DIR__.'/../resources/'.$fn, $fn);
+        $this->assertTrue($connection->scpSend(__DIR__.'/../resources/'.$fn, $fn));
+
+        // Test receive
+        $local_fn = $this->getTempDir().'ssh-test-'.rand(10000, 99999).'-'.$fn;
+        $this->assertTrue($connection->scpReceive($fn, $local_fn));
 
         $connection->disconnect();
+
+        // Check files are identical
+        $md5_a = md5_file(__DIR__.'/../resources/'.$fn);
+        $md5_b = md5_file($local_fn);
+
+        if (file_exists($local_fn)) {
+            unlink($local_fn);
+        }
+
+        $this->assertEquals($md5_a, $md5_b);
+    }
+
+    /**
+     * @medium
+     * @group server
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
+     */
+    public function testSendNotConnected()
+    {
+        $connection = $this->getConnection();
+        $connection->disconnect();
+
+        $connection->scpSend(__DIR__.'/../resources/test-file.txt', 'test-file.txt');
+    }
+
+    /**
+     * @medium
+     * @group server
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
+     */
+    public function testReceiveNotConnected()
+    {
+        $connection = $this->getConnection();
+        $connection->disconnect();
+
+        $connection->scpReceive('test-file.txt', __DIR__.'/../resources/test-file.txt');
+    }
+
+    /**
+     * @medium
+     * @group server
+     */
+    public function testMissingLocal()
+    {
+        $connection = $this->getConnection();
+        $this->assertFalse($connection->scpSend(__DIR__.'/../resources/missing.txt', 'missing.txt'));
+    }
+
+    /**
+     * @medium
+     * @group server
+     */
+    public function testMissingRemote()
+    {
+        $connection = $this->getConnection();
+        $local_fn   = $this->getTempDir().'ssh-test-missing.txt';
+        $this->assertFalse($connection->scpReceive('missing-file.txt', $local_fn));
+
+        if (file_exists($local_fn)) {
+            unlink($local_fn);
+        }
     }
 
 
-    public function testFiles() {
+    public function testFiles()
+    {
         return [
-          ['testfile.txt'],
-          ['testfile.bin'],
+            ['test-file.txt'],
+            ['test-file.bin'],
         ];
     }
 

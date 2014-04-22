@@ -197,7 +197,12 @@ class Connection implements LoggerAwareInterface
      */
     public function scpSend($local, $remote, $create_mode = 0644)
     {
+        if (!$this->isConnected()) {
+            $this->log(LogLevel::ERROR, "SCP cannot send file - not connected");
+            throw new NotConnectedException();
+        }
 
+        return @ssh2_scp_send($this->resource, $local, $remote, $create_mode);
     }
 
     /**
@@ -210,7 +215,12 @@ class Connection implements LoggerAwareInterface
      */
     public function scpReceive($remote, $local)
     {
+        if (!$this->isConnected()) {
+            $this->log(LogLevel::ERROR, "SCP cannot receive file - not connected");
+            throw new NotConnectedException();
+        }
 
+        return @ssh2_scp_recv($this->resource, $remote, $local);
     }
 
 
