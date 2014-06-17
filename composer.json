@@ -19,7 +19,13 @@
         "ext-ssh2": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": ">=3.7.0"
+        "phpunit/phpunit": ">=4.0.0",
+        "bravo3/network-proxy": "~1.1.0",
+        "ext-openssl": "*"
+    },
+    "suggest": {
+        "bravo3/network-proxy": "To route SSH connections through SOCKS proxies",
+        "ext-openssl": "To allow the use of private keys without public keys"
     },
     "scripts": {
         "post-install-cmd": [

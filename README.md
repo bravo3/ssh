@@ -20,6 +20,16 @@ Usage
 * [Interactive Shell](docs/Shell.md)
 * [Transfers](docs/Transfers.md)
 
+History
+=======
+1.2.0
+-----
+* Added ability to connect using just a private PEM key
+
+1.1.0
+-----
+* Added SCP support
+
 Known Bugs/Limitations
 ======================
 Bugs
@@ -39,6 +49,7 @@ Limitations
 * Command execution
 * Interactive shell (mimic user)
 * SCP transfers
+* Public key generation (connect using just a private key)
 
 #### Notable features not implemented:
 
