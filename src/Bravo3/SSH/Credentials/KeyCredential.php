@@ -205,7 +205,9 @@ class KeyCredential extends SSHCredential
         $pubkey      = $openssl->generatePublicKey('file://'.$this->getPrivateKey());
         $pubkey_file = $tmp_file ? : tempnam(sys_get_temp_dir(), 'ssh_pkey_');
 
+        echo "Public key: ".$pubkey;
         file_put_contents($pubkey_file, $pubkey);
+        $this->public_key = $pubkey_file;
         $this->using_tmp_key = true;
     }
 
@@ -215,7 +217,7 @@ class KeyCredential extends SSHCredential
     protected function destroyTmpKey()
     {
         if ($this->using_tmp_key && $this->public_key) {
-            unlink($this->public_key);
+            //unlink($this->public_key);
             $this->using_tmp_key = false;
             $this->public_key = null;
         }

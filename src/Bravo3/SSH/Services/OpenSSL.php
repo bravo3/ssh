@@ -33,7 +33,26 @@ class OpenSSL
             throw new FileNotReadableException("Unable to read private key");
         }
 
-        return openssl_pkey_get_details($res)["key"];
+        // Get public key data
+        $openssl_data = openssl_pkey_get_details($res);
+
+        // The OpenSSL certificate
+        $openssl_key = $openssl_data['key'];
+
+        // Certificate format (RSA and DSA supported)
+        if (isset($openssl_data['rsa'])) {
+            $openssl_format = 'rsa';
+        } elseif (isset($openssl_data['dsa'])) {
+            $openssl_format = 'dss';
+        } else {
+            throw new \RuntimeException("Unknown key format");
+        }
+
+        // Convert the key to an OpenSSH key
+        $openssh_key = null;
+        // http://stackoverflow.com/questions/5524121/converting-an-openssl-generated-rsa-public-key-to-openssh-format-php
+
+        return $openssh_key;
     }
 
 }

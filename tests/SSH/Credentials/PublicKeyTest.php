@@ -32,9 +32,10 @@ class PublicKeyTest extends \PHPUnit_Framework_TestCase
      * @group server
      * @medium
      */
-    public function testKeyAuthentication($public, $private, $password)
+    public function testNoPublicKey($public, $private, $password)
     {
-        $connection = new Connection(\properties::$host, \properties::$port, new KeyCredential(\properties::$user, $public, $private, $password));
+        $credential = new KeyCredential(\properties::$user, null, $private, $password);
+        $connection = new Connection(\properties::$host, \properties::$port, $credential);
         $this->assertTrue($connection->connect());
         $this->assertTrue($connection->authenticate());
         $this->assertTrue($connection->isAuthenticated());
