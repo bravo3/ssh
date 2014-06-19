@@ -2,14 +2,17 @@
 namespace Bravo3\SSH\Services;
 
 use Bravo3\SSH\Exceptions\FileNotReadableException;
+use Bravo3\SSH\Exceptions\UnsupportedException;
 
 class KeyUtility
 {
     function __construct()
     {
+        // @codeCoverageIgnoreStart
         if (!function_exists('openssl_pkey_new')) {
             throw new \RuntimeException("OpenSSL extension not loaded");
         }
+        // @codeCoverageIgnoreEnd
     }
 
 
@@ -27,11 +30,10 @@ class KeyUtility
      */
     public function generateSshPublicKey($private_key, $passphrase = '')
     {
-        // // http://stackoverflow.com/questions/5524121/converting-an-openssl-generated-rsa-public-key-to-openssh-format-php
         $res = @openssl_pkey_get_private($private_key, $passphrase);
 
         if (!$res) {
-            throw new FileNotReadableException("Unable to read private key");
+            throw new FileNotReadableException($private_key);
         }
 
         // Get public key data
@@ -43,7 +45,7 @@ class KeyUtility
         } elseif (isset($key['dsa'])) {
             return $this->sshEncodeDsaPublicKey($key);
         } else {
-            throw new \RuntimeException("Unknown key format");
+            throw new UnsupportedException("Unknown key format");
         }
     }
 

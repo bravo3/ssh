@@ -53,7 +53,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         } catch (NotConnectedException $e) {
         }
 
-        $this->assertEquals("error: Cannot authenticate - not connected\n", $logger->getHistory());
+        $this->assertEquals("error: Not connected\n", $logger->getHistory());
     }
 
     /**
