@@ -7,6 +7,7 @@ use Bravo3\SSH\Exceptions\NotConnectedException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Psr\Log\NullLogger;
 
 /**
  * A connection to an SSH server
@@ -50,6 +51,7 @@ class Connection implements LoggerAwareInterface
         $this->host        = $host;
         $this->port        = $port;
         $this->credentials = $credentials;
+        $this->setLogger(new NullLogger());
     }
 
 
@@ -164,26 +166,18 @@ class Connection implements LoggerAwareInterface
      */
     public function execute($command, Terminal $terminal = null, $pty = null)
     {
-        if ($terminal === null) {
-            $terminal = new Terminal();
-        }
-
-        return new ExecutionStream($command, $this, $terminal, $pty);
+        return new ExecutionStream($command, $this, $terminal ? : new Terminal(), $pty);
     }
 
     /**
      * Get an interactive shell
      *
-     * @param null $terminal
+     * @param Terminal $terminal
      * @return Shell
      */
-    public function getShell($terminal = null)
+    public function getShell(Terminal $terminal = null)
     {
-        if ($terminal === null) {
-            $terminal = new Terminal();
-        }
-
-        return new Shell($this, $terminal);
+        return new Shell($this, $terminal ? : new Terminal());
     }
 
 
@@ -229,7 +223,7 @@ class Connection implements LoggerAwareInterface
     /**
      * Set Credentials
      *
-     * @param \Bravo3\SSH\Credentials\SSHCredential $credentials
+     * @param SSHCredential $credentials
      * @return Connection
      */
     public function setCredentials($credentials)
@@ -241,7 +235,7 @@ class Connection implements LoggerAwareInterface
     /**
      * Get Credentials
      *
-     * @return \Bravo3\SSH\Credentials\SSHCredential
+     * @return SSHCredential
      */
     public function getCredentials()
     {
@@ -322,9 +316,6 @@ class Connection implements LoggerAwareInterface
      */
     public function log($level, $message, array $context = array())
     {
-        if (!$this->logger) {
-            return;
-        }
         $this->logger->log($level, $message, $context);
     }
 
@@ -347,6 +338,5 @@ class Connection implements LoggerAwareInterface
     {
         return $this->authenticated;
     }
-
 
 }

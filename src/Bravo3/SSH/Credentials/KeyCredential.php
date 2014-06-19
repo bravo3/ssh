@@ -3,6 +3,7 @@ namespace Bravo3\SSH\Credentials;
 
 use Bravo3\SSH\Exceptions\FileNotExistsException;
 use Bravo3\SSH\Exceptions\FileNotReadableException;
+use Bravo3\SSH\Services\KeyUtility;
 
 class KeyCredential extends SSHCredential
 {
@@ -22,6 +23,19 @@ class KeyCredential extends SSHCredential
      */
     protected $password;
 
+    /**
+     * @var bool
+     */
+    protected $using_tmp_key = false;
+
+    /**
+     *
+     *
+     * @param string $username
+     * @param string $public_key  Optional - will be generated automatically if null or omitted
+     * @param string $private_key Path to private key file
+     * @param string $password    Optional password to private key
+     */
     function __construct($username = 'root', $public_key = null, $private_key = null, $password = null)
     {
         $this->setUsername($username);
@@ -37,17 +51,23 @@ class KeyCredential extends SSHCredential
         $this->setPassword($password);
     }
 
+    function __destruct()
+    {
+        $this->destroyTmpKey();
+    }
 
     /**
      * Set public key filename
      *
      * @param string $public_key
      * @return KeyCredential
-     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
-     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
+     * @throws FileNotExistsException
+     * @throws FileNotReadableException
      */
     public function setPublicKey($public_key)
     {
+        $this->destroyTmpKey();
+
         // Check file is readable
         if (!file_exists($public_key)) {
             throw new FileNotExistsException($public_key);
@@ -75,8 +95,8 @@ class KeyCredential extends SSHCredential
      *
      * @param string $private_key
      * @return KeyCredential
-     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
-     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
+     * @throws FileNotExistsException
+     * @throws FileNotReadableException
      */
     public function setPrivateKey($private_key)
     {
@@ -130,8 +150,8 @@ class KeyCredential extends SSHCredential
      * @param string $public
      * @param string $private
      * @param string $password
-     * @throws \Bravo3\SSH\Exceptions\FileNotExistsException
-     * @throws \Bravo3\SSH\Exceptions\FileNotReadableException
+     * @throws FileNotExistsException
+     * @throws FileNotReadableException
      */
     public function setKeyPair($public, $private, $password = null)
     {
@@ -148,6 +168,15 @@ class KeyCredential extends SSHCredential
      */
     public function authenticate($resource)
     {
+        if (!$this->getPrivateKey()) {
+            throw new FileNotExistsException("Missing private key file");
+        }
+
+        if (!$this->getPublicKey()) {
+            // We have a private key, but no public key - try to work out the public key from the private key
+            $this->generatePublicKey();
+        }
+
         return ssh2_auth_pubkey_file(
             $resource,
             $this->getUsername(),
@@ -157,5 +186,40 @@ class KeyCredential extends SSHCredential
         );
     }
 
+    /**
+     * Automatically generate the public key from the private key
+     *
+     * The public key file will be removed when this class is destroyed. This function is automatically called when you
+     * attempt to authenticate without a public key file.
+     *
+     * @param string $tmp_file Filename to save the public key, uses a temp file if omitted
+     * @throws FileNotExistsException
+     */
+    public function generatePublicKey($tmp_file = null)
+    {
+        if (!$this->getPrivateKey()) {
+            throw new FileNotExistsException("Missing private key file");
+        }
+
+        $util        = new KeyUtility();
+        $pubkey      = $util->generateSshPublicKey('file://'.$this->getPrivateKey());
+        $pubkey_file = $tmp_file ? : tempnam(sys_get_temp_dir(), 'ssh_pkey_');
+
+        file_put_contents($pubkey_file, $pubkey);
+        $this->public_key    = $pubkey_file;
+        $this->using_tmp_key = true;
+    }
+
+    /**
+     * Removes a temporary public key file
+     */
+    protected function destroyTmpKey()
+    {
+        if ($this->using_tmp_key && $this->public_key) {
+            unlink($this->public_key);
+            $this->using_tmp_key = false;
+            $this->public_key    = null;
+        }
+    }
 
 } 
