@@ -21,6 +21,20 @@ An exception will be raised if the server fingerprint is a mismatch. Once authen
 commands or request an interactive shell.
 
 
+Tunnelling
+----------
+Tunnels are straight forward, just call the `tunnel()` function on any authenticated connection to tunnel through
+to another host. The return value is a new `Connection`.
+
+The best way to close all connections once a chain of tunnels is established is to call the `disconnectChain()`
+function on the leaf connection - which will traverse backwards calling `disconnect()` on each connection.
+
+    $auth = new PasswordCredential('username', 'password');
+    $connection = new Connection('hostname', 22, $auth);
+    $tunnel = $connection->tunnel('newhost', 22, $auth);
+    ...
+    $tunnel->disconnectChain();
+
 PSR-3 Logger Support
 --------------------
 The Connection class implements the PSR-3 LoggerAwareInterface, you may provide a LoggerInterface for the connection

@@ -23,6 +23,10 @@ Usage
 
 History
 =======
+1.3.0
+-----
+* Added support to tunnel connections
+
 1.2.0
 -----
 * Added ability to connect using just a private PEM key
@@ -51,9 +55,9 @@ Limitations
 * Interactive shell (mimic user)
 * SCP transfers
 * Public key generation (connect using just a private key)
+* Tunnels
 
 #### Notable features not implemented:
 
 * Agent and host authentication
 * SFTP transfers
-* Tunnels
