@@ -3,7 +3,7 @@ namespace Bravo3\SSH\Credentials;
 
 use Bravo3\SSH\Exceptions\FileNotExistsException;
 use Bravo3\SSH\Exceptions\FileNotReadableException;
-use Bravo3\SSH\Services\OpenSSL;
+use Bravo3\SSH\Services\KeyUtility;
 
 class KeyCredential extends SSHCredential
 {
@@ -201,13 +201,12 @@ class KeyCredential extends SSHCredential
             throw new FileNotExistsException("Missing private key file");
         }
 
-        $openssl     = new OpenSSL();
-        $pubkey      = $openssl->generatePublicKey('file://'.$this->getPrivateKey());
+        $util        = new KeyUtility();
+        $pubkey      = $util->generateSshPublicKey('file://'.$this->getPrivateKey());
         $pubkey_file = $tmp_file ? : tempnam(sys_get_temp_dir(), 'ssh_pkey_');
 
-        echo "Public key: ".$pubkey;
         file_put_contents($pubkey_file, $pubkey);
-        $this->public_key = $pubkey_file;
+        $this->public_key    = $pubkey_file;
         $this->using_tmp_key = true;
     }
 
@@ -217,9 +216,9 @@ class KeyCredential extends SSHCredential
     protected function destroyTmpKey()
     {
         if ($this->using_tmp_key && $this->public_key) {
-            //unlink($this->public_key);
+            unlink($this->public_key);
             $this->using_tmp_key = false;
-            $this->public_key = null;
+            $this->public_key    = null;
         }
     }
 

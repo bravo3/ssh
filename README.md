@@ -2,7 +2,7 @@ Interactive SSH2 for PHP
 ========================
 This module is a PHP wrapper for the libssh2 extension with support for interactive sessions. With interactive session
 support you can mimic a user terminal allowing you access to things such as sudo which might not typically be available
-to remote sessions.
+to remote sessions. Unlike most libssh2 libraries, you do not need a public key file to authenticate using keys pairs.
 
 Installation
 ============
@@ -19,6 +19,7 @@ Usage
 * [Command Execution](docs/ExecutionStream.md)
 * [Interactive Shell](docs/Shell.md)
 * [Transfers](docs/Transfers.md)
+* [Keypair Authentication](docs/KeypairAuthentication.md)
 
 History
 =======
