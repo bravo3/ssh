@@ -38,6 +38,23 @@ class ExecutionStreamTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @expectedException \Bravo3\SSH\Exceptions\NotConnectedException
+     * @group server
+     */
+    public function testNoConnection()
+    {
+        $connection = new Connection(
+            \properties::$host,
+            \properties::$port,
+            new PasswordCredential(\properties::$user, \properties::$pass)
+        );
+
+        new ExecutionStream('echo "hello world"', $connection, new Terminal());
+        $this->fail();
+    }
+
+    /**
+     * @medium
      * @expectedException \Bravo3\SSH\Exceptions\NotAuthenticatedException
      * @group server
      */

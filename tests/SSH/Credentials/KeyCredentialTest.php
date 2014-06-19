@@ -6,11 +6,11 @@ use Bravo3\SSH\Credentials\KeyCredential;
 
 class KeyCredentialTest extends \PHPUnit_Framework_TestCase
 {
-    const DEFAULT_USER = 'root';
-    const NEW_USER = 'username';
+    const DEFAULT_USER     = 'root';
+    const NEW_USER         = 'username';
     const KEYFILE_PASSWORD = 'password';
-    const MISSING_FILE = 'a.missing.file';
-    const FAKE_FILE = '/../../resources/not-a-file.pem';
+    const MISSING_FILE     = 'a.missing.file';
+    const FAKE_FILE        = '/../../resources/not-a-file.pem';
 
 
     /**
@@ -93,6 +93,28 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @small
+     * @expectedException \Bravo3\SSH\Exceptions\FileNotExistsException
+     */
+    public function testNoPrivateKey()
+    {
+        $credentials = new KeyCredential();
+        $credentials->authenticate(null);
+        $this->fail();
+    }
+
+    /**
+     * @small
+     * @expectedException \Bravo3\SSH\Exceptions\FileNotExistsException
+     */
+    public function testNoPrivateKeyGenerate()
+    {
+        $credentials = new KeyCredential();
+        $credentials->generatePublicKey();
+        $this->fail();
+    }
+
+    /**
      * Data Provider
      * Return an array of file paths to a PEM formatted pub/priv/password
      *
@@ -112,12 +134,15 @@ class KeyCredentialTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @dataProvider keyFileProvider
-     * @group server
+     * @group        server
      * @medium
      */
     public function testKeyAuthentication($public, $private, $password)
     {
-        $connection = new Connection(\properties::$host, \properties::$port, new KeyCredential(\properties::$user, $public, $private, $password));
+        $connection = new Connection(
+            \properties::$host, \properties::$port,
+            new KeyCredential(\properties::$user, $public, $private, $password)
+        );
         $this->assertTrue($connection->connect());
         $this->assertTrue($connection->authenticate());
         $this->assertTrue($connection->isAuthenticated());

@@ -3,6 +3,7 @@ namespace Bravo3\SSH;
 
 use Bravo3\SSH\Credentials\SSHCredential;
 use Bravo3\SSH\Exceptions\FingerprintMismatchException;
+use Bravo3\SSH\Exceptions\NotAuthenticatedException;
 use Bravo3\SSH\Exceptions\NotConnectedException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -14,6 +15,10 @@ use Psr\Log\NullLogger;
  */
 class Connection implements LoggerAwareInterface
 {
+    const ERR_CONNECTION           = "Connection error";
+    const ERR_FINGERPRINT_MISMATCH = "Fingerprint mismatch";
+    const ERR_NOT_CONNECTED        = "Not connected";
+    const ERR_NOT_AUTHENTICATED    = "Not authenticated";
     /**
      * @var string
      */
@@ -39,7 +44,14 @@ class Connection implements LoggerAwareInterface
      *
      * @var mixed
      */
-    protected $resource;
+    protected $resource = null;
+
+    /**
+     * The SSH session resource, if this is non-null it represents the connection is live
+     *
+     * @var Connection
+     */
+    protected $parent = null;
 
     /**
      * @var bool
@@ -52,6 +64,39 @@ class Connection implements LoggerAwareInterface
         $this->port        = $port;
         $this->credentials = $credentials;
         $this->setLogger(new NullLogger());
+    }
+
+    /**
+     * Tunnel to another SSH server
+     *
+     * @param string        $host
+     * @param int           $port
+     * @param SSHCredential $credentials
+     * @return Connection|null Returns null if the connection failed
+     */
+    public function tunnel($host, $port = 22, SSHCredential $credentials = null)
+    {
+        $this->requireConnection();
+        $this->log(LogLevel::INFO, "Creating tunnel to ".$host.":".$port);
+
+        $tunnel_resource = @ssh2_tunnel($this->resource, $host, $port);
+        if (!$tunnel_resource) {
+            $this->log(LogLevel::ERROR, self::ERR_CONNECTION);
+            return null;
+        }
+
+        $tunnel = new Connection($host, $port, $credentials);
+        $r      = new \ReflectionClass($tunnel);
+
+        $r_resource = $r->getProperty('resource');
+        $r_resource->setAccessible(true);
+        $r_resource->setValue($tunnel, $tunnel_resource);
+
+        $r_parent = $r->getProperty('parent');
+        $r_parent->setAccessible(true);
+        $r_parent->setValue($tunnel, $this);
+
+        return $tunnel;
     }
 
 
@@ -71,7 +116,7 @@ class Connection implements LoggerAwareInterface
 
         // Check connection was a success
         if ($this->resource === false) {
-            $this->log(LogLevel::ERROR, "Connection error");
+            $this->log(LogLevel::ERROR, self::ERR_CONNECTION);
             $this->disconnect();
             return false;
         }
@@ -80,7 +125,7 @@ class Connection implements LoggerAwareInterface
 
         // Check fingerprint if provided
         if ($fingerprint && !$this->checkFingerprint($fingerprint)) {
-            $this->log(LogLevel::WARNING, "Fingerprint mismatch");
+            $this->log(LogLevel::WARNING, self::ERR_FINGERPRINT_MISMATCH);
             $this->disconnect();
             throw new FingerprintMismatchException();
         }
@@ -104,6 +149,18 @@ class Connection implements LoggerAwareInterface
     }
 
     /**
+     * Disconnect this connection and all parent connections in the tunnel chain
+     */
+    public function disconnectChain()
+    {
+        $connection = $this;
+
+        do {
+            $connection->disconnect();
+        } while ($connection = $connection->getParent());
+    }
+
+    /**
      * Get the server SSH fingerprint
      *
      * @see ssh2_fingerprint()
@@ -118,11 +175,7 @@ class Connection implements LoggerAwareInterface
             $flags = SSH2_FINGERPRINT_MD5 | SSH2_FINGERPRINT_HEX;
         }
 
-        if (!$this->isConnected()) {
-            $this->log(LogLevel::ERROR, "Cannot get fingerprint - not connected");
-            throw new NotConnectedException();
-        }
-
+        $this->requireConnection(false);
         return ssh2_fingerprint($this->resource, $flags);
     }
 
@@ -147,11 +200,7 @@ class Connection implements LoggerAwareInterface
      */
     public function authenticate()
     {
-        if (!$this->isConnected()) {
-            $this->log(LogLevel::ERROR, "Cannot authenticate - not connected");
-            throw new NotConnectedException();
-        }
-
+        $this->requireConnection(false);
         return $this->authenticated = $this->getCredentials()->authenticate($this->resource);
     }
 
@@ -166,6 +215,7 @@ class Connection implements LoggerAwareInterface
      */
     public function execute($command, Terminal $terminal = null, $pty = null)
     {
+        $this->requireConnection();
         return new ExecutionStream($command, $this, $terminal ? : new Terminal(), $pty);
     }
 
@@ -177,6 +227,7 @@ class Connection implements LoggerAwareInterface
      */
     public function getShell(Terminal $terminal = null)
     {
+        $this->requireConnection();
         return new Shell($this, $terminal ? : new Terminal());
     }
 
@@ -191,11 +242,7 @@ class Connection implements LoggerAwareInterface
      */
     public function scpSend($local, $remote, $create_mode = 0644)
     {
-        if (!$this->isConnected()) {
-            $this->log(LogLevel::ERROR, "SCP cannot send file - not connected");
-            throw new NotConnectedException();
-        }
-
+        $this->requireConnection();
         return @ssh2_scp_send($this->resource, $local, $remote, $create_mode);
     }
 
@@ -209,12 +256,28 @@ class Connection implements LoggerAwareInterface
      */
     public function scpReceive($remote, $local)
     {
+        $this->requireConnection();
+        return @ssh2_scp_recv($this->resource, $remote, $local);
+    }
+
+    /**
+     * Throw an exception if the state is not connected and authenticated
+     *
+     * @param bool $authenticationRequired
+     * @throws Exceptions\NotAuthenticatedException
+     * @throws Exceptions\NotConnectedException
+     */
+    protected function requireConnection($authenticationRequired = true)
+    {
         if (!$this->isConnected()) {
-            $this->log(LogLevel::ERROR, "SCP cannot receive file - not connected");
+            $this->log(LogLevel::ERROR, self::ERR_NOT_CONNECTED);
             throw new NotConnectedException();
         }
 
-        return @ssh2_scp_recv($this->resource, $remote, $local);
+        if ($authenticationRequired && !$this->isAuthenticated()) {
+            $this->log(LogLevel::ERROR, self::ERR_NOT_AUTHENTICATED);
+            throw new NotAuthenticatedException();
+        }
     }
 
 
@@ -338,5 +401,18 @@ class Connection implements LoggerAwareInterface
     {
         return $this->authenticated;
     }
+
+    /**
+     * Get parent connection
+     *
+     * If this connection is via a tunnel, this will contain the Connection from which it was established.
+     *
+     * @return Connection|null
+     */
+    public function getParent()
+    {
+        return $this->parent;
+    }
+
 
 }

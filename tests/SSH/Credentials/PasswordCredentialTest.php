@@ -33,7 +33,10 @@ class PasswordCredentialTest extends \PHPUnit_Framework_TestCase
      */
     public function testPasswordAuthentication()
     {
-        $connection = new Connection(\properties::$host, \properties::$port, new PasswordCredential(\properties::$user, \properties::$pass));
+        $connection = new Connection(
+            \properties::$host, \properties::$port,
+            new PasswordCredential(\properties::$user, \properties::$pass)
+        );
         $this->assertTrue($connection->connect());
         $this->assertTrue($connection->authenticate());
         $this->assertTrue($connection->isAuthenticated());
