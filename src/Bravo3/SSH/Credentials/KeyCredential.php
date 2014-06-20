@@ -177,7 +177,7 @@ class KeyCredential extends SSHCredential
             $this->generatePublicKey();
         }
 
-        return ssh2_auth_pubkey_file(
+        return @ssh2_auth_pubkey_file(
             $resource,
             $this->getUsername(),
             $this->getPublicKey(),

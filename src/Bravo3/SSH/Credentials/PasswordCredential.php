@@ -45,7 +45,7 @@ class PasswordCredential extends SSHCredential
      */
     public function authenticate($resource)
     {
-        return ssh2_auth_password($resource, $this->getUsername(), $this->getPassword());
+        return @ssh2_auth_password($resource, $this->getUsername(), $this->getPassword());
     }
 
 
