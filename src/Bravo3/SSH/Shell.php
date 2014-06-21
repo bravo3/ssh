@@ -1,8 +1,10 @@
 <?php
 namespace Bravo3\SSH;
 
+use Bravo3\SSH\Enum\ShellType;
 use Bravo3\SSH\Exceptions\NotAuthenticatedException;
 use Bravo3\SSH\Exceptions\NotConnectedException;
+use Eloquent\Enumeration\Exception\UndefinedMemberException;
 
 /**
  * An interactive SSH shell for sending and receiving text data
@@ -33,6 +35,10 @@ class Shell
      */
     protected $smart_marker = null;
 
+    /**
+     * @var ShellType
+     */
+    protected $shell_type;
 
     /**
      * Typically called from Connection::getShell()
@@ -50,6 +56,7 @@ class Shell
             throw new NotAuthenticatedException();
         }
 
+        $this->shell_type = null;
         $this->connection = $connection;
         $this->terminal   = $terminal;
         $this->resource   = ssh2_shell(
@@ -84,9 +91,10 @@ class Shell
      * Read until a string marker is detected *anywhere in the response*
      *
      * @param string $marker
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilMarker($marker)
+    public function readUntilMarker($marker, $normalise_line_endings = false)
     {
         $data = '';
 
@@ -95,6 +103,10 @@ class Shell
 
             if ($new) {
                 $data .= $new;
+
+                if ($normalise_line_endings) {
+                    $data = str_replace("\r\n", "\n", $data);
+                }
 
                 if (strpos($data, $marker) !== false) {
                     break;
@@ -112,24 +124,30 @@ class Shell
      *     The marker must be at the end of a packet, eg. the PS1 marker waiting for a new command
      *
      * @param string $marker A marker to stop reading when found
-     * @param string $ignore A prefix to the marker that if found, will ignore the match
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilEndMarker($marker)
+    public function readUntilEndMarker($marker, $timeout = 0, $normalise_line_endings = false)
     {
-        $data = '';
+        $data  = '';
+        $start = microtime(true);
 
-        do {
+        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
             $new = fread($this->resource, 8192);
 
             if ($new) {
                 $data .= $new;
+                $start = microtime(true);
+
+                if ($normalise_line_endings) {
+                    $data = str_replace("\r\n", "\n", $data);
+                }
 
                 if (substr($data, -strlen($marker)) == $marker) {
                     break;
                 }
             }
-        } while (true);
+        }
 
         return $data;
     }
@@ -138,23 +156,31 @@ class Shell
      * Read until a regex is matched
      *
      * @param string $regex
+     * @param int    $timeout Pause timeout in seconds
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilExpression($regex)
+    public function readUntilExpression($regex, $timeout = 0, $normalise_line_endings = false)
     {
-        $data = '';
+        $data  = '';
+        $start = microtime(true);
 
-        do {
+        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
             $new = fread($this->resource, 8192);
 
             if ($new) {
                 $data .= $new;
+                $start = microtime(true);
 
-                if (preg_match($regex, $data)) {
+                if ($normalise_line_endings) {
+                    $data = str_replace("\r\n", "\n", $data);
+                }
+
+                if (preg_match_all($regex, $data) > 0) {
                     break;
                 }
             }
-        } while (true);
+        }
 
         return $data;
     }
@@ -163,9 +189,10 @@ class Shell
      * Keep reading until there is no new data for a specified length of time
      *
      * @param float $delay
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilPause($delay = 1.0)
+    public function readUntilPause($delay = 1.0, $normalise_line_endings = false)
     {
         $data  = '';
         $start = microtime(true);
@@ -177,6 +204,10 @@ class Shell
             if ($new) {
                 $data .= $new;
                 $start = microtime(true);
+
+                if ($normalise_line_endings) {
+                    $data = str_replace("\r\n", "\n", $data);
+                }
             }
         }
 
@@ -189,9 +220,9 @@ class Shell
      * @param float $delay
      * @return string
      */
-    public function waitForContent($delay = 0.1)
+    public function waitForContent($delay = 0.1, $normalise_line_endings = false)
     {
-        return $this->readBytes(1).$this->readUntilPause($delay);
+        return $this->readBytes(1).$this->readUntilPause($delay, $normalise_line_endings);
     }
 
     /**
@@ -216,14 +247,32 @@ class Shell
     }
 
     /**
-     * Set the PS1 variable on the server so that smart commands will work
+     * Set the PS1/prompt variable on the server so that smart commands will work
+     *
+     * @param string    $marker     Leave blank to use a random marker
+     * @param ShellType $shell_type Will auto-detect is omitted
      */
-    public function setSmartConsole()
+    public function setSmartConsole($marker = null, ShellType $shell_type = null)
     {
         // Set the smart marker with a timestamp to keep it unique from any references, etc
-        $this->smart_marker = '#SMART:CONSOLE:MKR#'.time().'$';
+        $this->smart_marker = $marker ? : '#:MKR#'.time().'$';
 
-        $this->sendln('PS1="'.$this->smart_marker.'"');
+        if ($shell_type === null) {
+            $shell_type = $this->getShellType();
+        }
+
+        switch ($shell_type) {
+            // Bourne-shell compatibles
+            default:
+                $this->sendln('export PS1="'.$this->smart_marker.'"');
+                break;
+            // C-shell compatibles
+            case ShellType::CSH():
+            case ShellType::TCSH():
+                $this->sendln('set prompt="'.$this->smart_marker.'"');
+                break;
+        }
+
         $this->readUntilEndMarker($this->smart_marker);
     }
 
@@ -266,5 +315,40 @@ class Shell
         return $this->resource;
     }
 
+    /**
+     * Resolve the shell type
+     *
+     * @param float $timeout
+     * @return ShellType
+     */
+    public function getShellType($timeout = 15.0)
+    {
+        if ($this->shell_type !== null) {
+            return $this->shell_type;
+        }
+
+        $this->waitForContent(1);
+        $this->sendln("echo $0");
+
+        $regex = '/echo \$0$\n^(\-[a-z]+)/sm';
+        $out   = $this->readUntilExpression($regex, $timeout, true);
+
+        $matches = null;
+        preg_match_all($regex, $out, $matches);
+        $shell_name = @$matches[1][0];
+
+        // $0 over SSH may prefix with a hyphen
+        if ($shell_name{0} == '-') {
+            $shell_name = substr($shell_name, 1);
+        }
+
+        try {
+            $this->shell_type = ShellType::memberByValue($shell_name);
+        } catch (UndefinedMemberException $e) {
+            $this->shell_type = ShellType::UNKNOWN();
+        }
+
+        return $this->shell_type;
+    }
 
 }

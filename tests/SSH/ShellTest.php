@@ -59,6 +59,8 @@ class ShellTest extends \PHPUnit_Framework_TestCase
     public function testSmartConsole()
     {
         $shell = $this->getShell();
+        $shell_type = $shell->getShellType();
+        var_dump($shell_type);
 
         // Test for command result, trimmed
         $this->assertEquals('-'.\properties::$user.'-', $shell->sendSmartCommand("echo -`whoami`-"));
