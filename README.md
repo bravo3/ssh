@@ -23,6 +23,11 @@ Usage
 
 History
 =======
+1.4.0
+-----
+* Deprecated version 1.3.x
+* Fixed logic of the ssh2_tunnel() function
+
 1.3.0
 -----
 * Added support to tunnel connections
@@ -55,7 +60,7 @@ Limitations
 * Interactive shell (mimic user)
 * SCP transfers
 * Public key generation (connect using just a private key)
-* Tunnels
+* Tunnels (remote connections)
 
 #### Notable features not implemented:
 

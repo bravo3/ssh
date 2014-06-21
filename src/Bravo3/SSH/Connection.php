@@ -67,36 +67,18 @@ class Connection implements LoggerAwareInterface
     }
 
     /**
-     * Tunnel to another SSH server
+     * Open a connection from the SSH server
      *
-     * @param string        $host
-     * @param int           $port
-     * @param SSHCredential $credentials
-     * @return Connection|null Returns null if the connection failed
+     * @param string $host
+     * @param int    $port
+     * @return resource
      */
-    public function tunnel($host, $port = 22, SSHCredential $credentials = null)
+    public function getRemoteStream($host, $port = 22)
     {
         $this->requireConnection();
-        $this->log(LogLevel::INFO, "Creating tunnel to ".$host.":".$port);
+        $this->log(LogLevel::INFO, "Opening remote connection to ".$host.":".$port);
 
-        $tunnel_resource = @ssh2_tunnel($this->resource, $host, $port);
-        if (!$tunnel_resource) {
-            $this->log(LogLevel::ERROR, self::ERR_CONNECTION);
-            return null;
-        }
-
-        $tunnel = new Connection($host, $port, $credentials);
-        $r      = new \ReflectionClass($tunnel);
-
-        $r_resource = $r->getProperty('resource');
-        $r_resource->setAccessible(true);
-        $r_resource->setValue($tunnel, $tunnel_resource);
-
-        $r_parent = $r->getProperty('parent');
-        $r_parent->setAccessible(true);
-        $r_parent->setValue($tunnel, $this);
-
-        return $tunnel;
+        return @ssh2_tunnel($this->resource, $host, $port);
     }
 
 
