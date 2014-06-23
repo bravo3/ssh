@@ -2,6 +2,7 @@
 namespace Bravo3\SSH;
 
 use Bravo3\SSH\Enum\ShellType;
+use Bravo3\SSH\Enum\StreamType;
 use Bravo3\SSH\Exceptions\NotAuthenticatedException;
 use Bravo3\SSH\Exceptions\NotConnectedException;
 use Eloquent\Enumeration\Exception\UndefinedMemberException;
@@ -12,15 +13,23 @@ use Eloquent\Enumeration\Exception\UndefinedMemberException;
 class Shell
 {
 
+    const STREAM_STDIO  = 0;
+    const STREAM_STDERR = 1;
+
     /**
      * @var Connection
      */
     protected $connection;
 
     /**
-     * @var mixed
+     * @var resource
      */
     protected $resource;
+
+    /**
+     * @var resource
+     */
+    protected $std_err;
 
     /**
      * @var Terminal
@@ -68,20 +77,31 @@ class Shell
             $terminal->getDimensionUnitType()
         );
 
+        // TODO: Does this force stdio to be limited to stdout?
+        $this->std_err = ssh2_fetch_stream($this->resource, SSH2_STREAM_STDERR);
     }
 
     /**
      * Read a given number of bytes - waiting until the count is matched
      *
-     * @param $count
+     * @param int        $count   Number of bytes to read
+     * @param int        $timeout Time in seconds to return if there is no new content
+     * @param StreamType $stream  Stream to read from, STDIO if omitted
      * @return string
      */
-    public function readBytes($count)
+    public function readBytes($count, $timeout = 0, StreamType $stream = null)
     {
-        $data = '';
-        while (strlen($data) < $count) {
-            $data .= fread($this->resource, $count - strlen($data));
+        $data     = '';
+        $start    = microtime(true);
+        $resource = $this->getResourceForStream($stream);
 
+        while ((strlen($data) < $count) && ($timeout == 0 || (microtime(true) - $start < $timeout))) {
+            $new = fread($resource, $count - strlen($data));
+
+            if ($new) {
+                $data .= $new;
+                $start = microtime(true);
+            }
         }
 
         return $data;
@@ -91,18 +111,21 @@ class Shell
      * Read until a string marker is detected *anywhere in the response*
      *
      * @param string $marker
+     * @param int    $timeout                Time in seconds to return if there is no new content
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilMarker($marker, $normalise_line_endings = false)
+    public function readUntilMarker($marker, $timeout = 0, $normalise_line_endings = false, StreamType $stream = null)
     {
-        $data = '';
+        $data  = '';
+        $start = microtime(true);
 
-        do {
+        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
             $new = fread($this->resource, 8192);
 
             if ($new) {
                 $data .= $new;
+                $start = microtime(true);
 
                 if ($normalise_line_endings) {
                     $data = str_replace("\r\n", "\n", $data);
@@ -112,7 +135,7 @@ class Shell
                     break;
                 }
             }
-        } while (true);
+        }
 
         return $data;
     }
@@ -123,12 +146,17 @@ class Shell
      * NB: This will not be matched if a single packet sends the marker and additional content,
      *     The marker must be at the end of a packet, eg. the PS1 marker waiting for a new command
      *
-     * @param string $marker A marker to stop reading when found
+     * @param string $marker                 A marker to stop reading when found
+     * @param int    $timeout                Time in seconds to return if there is no new content
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilEndMarker($marker, $timeout = 0, $normalise_line_endings = false)
-    {
+    public function readUntilEndMarker(
+        $marker,
+        $timeout = 0,
+        $normalise_line_endings = false,
+        StreamType $stream = null
+    ) {
         $data  = '';
         $start = microtime(true);
 
@@ -156,12 +184,16 @@ class Shell
      * Read until a regex is matched
      *
      * @param string $regex
-     * @param int    $timeout Pause timeout in seconds
+     * @param int    $timeout                Time in seconds to return if there is no new content
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilExpression($regex, $timeout = 0, $normalise_line_endings = false)
-    {
+    public function readUntilExpression(
+        $regex,
+        $timeout = 0,
+        $normalise_line_endings = false,
+        StreamType $stream = null
+    ) {
         $data  = '';
         $start = microtime(true);
 
@@ -188,11 +220,11 @@ class Shell
     /**
      * Keep reading until there is no new data for a specified length of time
      *
-     * @param float $delay
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param float $delay                  Time in seconds to return if there is no new content
+     * @param bool  $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilPause($delay = 1.0, $normalise_line_endings = false)
+    public function readUntilPause($delay = 1.0, $normalise_line_endings = false, StreamType $stream = null)
     {
         $data  = '';
         $start = microtime(true);
@@ -217,12 +249,14 @@ class Shell
     /**
      * Wait for content to be sent and then read until there is a pause
      *
-     * @param float $delay
+     * @param float      $delay
+     * @param bool       $normalise_oel
+     * @param StreamType $stream
      * @return string
      */
-    public function waitForContent($delay = 0.1, $normalise_line_endings = false)
+    public function waitForContent($delay = 0.1, $normalise_oel = false, StreamType $stream = null)
     {
-        return $this->readBytes(1).$this->readUntilPause($delay, $normalise_line_endings);
+        return $this->readBytes(1).$this->readUntilPause($delay, $normalise_oel);
     }
 
     /**
@@ -280,17 +314,19 @@ class Shell
      * Send a command to the server and receive it's response
      *
      * @param string $command
-     * @param bool   $trim Trim the command echo and PS1 marker from the response
+     * @param bool   $trim                   Trim the command echo and PS1 marker from the response
+     * @param int    $timeout                Time in seconds to return if there is no new content
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function sendSmartCommand($command, $trim = true)
+    public function sendSmartCommand($command, $trim = true, $timeout = 0, $normalise_line_endings = false)
     {
         if ($this->getSmartMarker() === null) {
             $this->setSmartConsole();
         }
 
         $this->sendln($command);
-        $response = $this->readUntilEndMarker($this->getSmartMarker());
+        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_line_endings);
 
         return $trim ? trim(substr($response, strlen($command) + 1, -strlen($this->getSmartMarker()))) : $response;
     }
@@ -308,12 +344,23 @@ class Shell
     /**
      * Get the connection resource, allowing you to read/write to it
      *
-     * @return mixed
+     * @return resource
      */
     public function getResource()
     {
         return $this->resource;
     }
+
+    /**
+     * Get the stderr resource
+     *
+     * @return resource
+     */
+    public function getStdErr()
+    {
+        return $this->std_err;
+    }
+
 
     /**
      * Resolve the shell type
@@ -349,6 +396,23 @@ class Shell
         }
 
         return $this->shell_type;
+    }
+
+    /**
+     * Return the correct resource for a StreamType
+     *
+     * @param StreamType $stream
+     * @return resource
+     */
+    protected function getResourceForStream(StreamType $stream = null)
+    {
+        switch ($stream) {
+            default:
+            case StreamType::STDIO():
+                return $this->resource;
+            case StreamType::STDERR():
+                return $this->std_err;
+        }
     }
 
 }

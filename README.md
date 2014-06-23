@@ -23,6 +23,18 @@ Usage
 
 History
 =======
+1.4.2
+-----
+* Extended the timeout and normalise options to smart commands
+
+
+1.4.1
+-----
+* Added the ability to detect remote shell type
+* Smart commands now work on C-shell variants
+* Added pause timeouts to all other shell read functions
+* Added the ability to normalise line-endings in shell output
+
 1.4.0
 -----
 * Deprecated version 1.3.x
