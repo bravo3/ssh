@@ -26,7 +26,7 @@ History
 1.4.2
 -----
 * Extended the timeout and normalise options to smart commands
-
+* Added the ability to read from stderr only
 
 1.4.1
 -----

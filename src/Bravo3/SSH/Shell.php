@@ -12,7 +12,6 @@ use Eloquent\Enumeration\Exception\UndefinedMemberException;
  */
 class Shell
 {
-
     const STREAM_STDIO  = 0;
     const STREAM_STDERR = 1;
 
@@ -110,24 +109,25 @@ class Shell
     /**
      * Read until a string marker is detected *anywhere in the response*
      *
-     * @param string $marker
-     * @param int    $timeout                Time in seconds to return if there is no new content
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param string $marker        A string to stop reading once found in the output
+     * @param int    $timeout       Time in seconds to return if there is no new content
+     * @param bool   $normalise_eol Convert CRLF to LF
      * @return string
      */
-    public function readUntilMarker($marker, $timeout = 0, $normalise_line_endings = false, StreamType $stream = null)
+    public function readUntilMarker($marker, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
     {
-        $data  = '';
-        $start = microtime(true);
+        $data     = '';
+        $start    = microtime(true);
+        $resource = $this->getResourceForStream($stream);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($this->resource, 8192);
+            $new = fread($resource, 8192);
 
             if ($new) {
                 $data .= $new;
                 $start = microtime(true);
 
-                if ($normalise_line_endings) {
+                if ($normalise_eol) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
 
@@ -146,32 +146,32 @@ class Shell
      * NB: This will not be matched if a single packet sends the marker and additional content,
      *     The marker must be at the end of a packet, eg. the PS1 marker waiting for a new command
      *
-     * @param string $marker                 A marker to stop reading when found
-     * @param int    $timeout                Time in seconds to return if there is no new content
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param string     $marker        A string to stop reading once found at the end of the output
+     * @param int        $timeout       Time in seconds to return if there is no new content
+     * @param bool       $normalise_eol Convert CRLF to LF
+     * @param StreamType $stream
      * @return string
      */
-    public function readUntilEndMarker(
-        $marker,
-        $timeout = 0,
-        $normalise_line_endings = false,
-        StreamType $stream = null
-    ) {
-        $data  = '';
-        $start = microtime(true);
+    public function readUntilEndMarker($marker, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
+    {
+        $data       = '';
+        $start      = microtime(true);
+        $marker_len = strlen($marker);
+        $resource   = $this->getResourceForStream($stream);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($this->resource, 8192);
+            $new = fread($resource, 8192);
 
             if ($new) {
                 $data .= $new;
                 $start = microtime(true);
 
-                if ($normalise_line_endings) {
+                if ($normalise_eol) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
 
-                if (substr($data, -strlen($marker)) == $marker) {
+
+                if (substr($data, -$marker_len) == $marker) {
                     break;
                 }
             }
@@ -184,27 +184,24 @@ class Shell
      * Read until a regex is matched
      *
      * @param string $regex
-     * @param int    $timeout                Time in seconds to return if there is no new content
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param int    $timeout       Time in seconds to return if there is no new content
+     * @param bool   $normalise_eol Convert CRLF to LF
      * @return string
      */
-    public function readUntilExpression(
-        $regex,
-        $timeout = 0,
-        $normalise_line_endings = false,
-        StreamType $stream = null
-    ) {
-        $data  = '';
-        $start = microtime(true);
+    public function readUntilExpression($regex, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
+    {
+        $data     = '';
+        $start    = microtime(true);
+        $resource = $this->getResourceForStream($stream);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($this->resource, 8192);
+            $new = fread($resource, 8192);
 
             if ($new) {
                 $data .= $new;
                 $start = microtime(true);
 
-                if ($normalise_line_endings) {
+                if ($normalise_eol) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
 
@@ -220,24 +217,25 @@ class Shell
     /**
      * Keep reading until there is no new data for a specified length of time
      *
-     * @param float $delay                  Time in seconds to return if there is no new content
-     * @param bool  $normalise_line_endings Convert CRLF to LF
+     * @param float $delay         Time in seconds to return if there is no new content
+     * @param bool  $normalise_oel Convert CRLF to LF
      * @return string
      */
-    public function readUntilPause($delay = 1.0, $normalise_line_endings = false, StreamType $stream = null)
+    public function readUntilPause($delay = 1.0, $normalise_oel = false, StreamType $stream = null)
     {
-        $data  = '';
-        $start = microtime(true);
+        $data     = '';
+        $start    = microtime(true);
+        $resource = $this->getResourceForStream($stream);
 
         while (microtime(true) - $start < $delay) {
-            $new = fread($this->resource, 8192);
+            $new = fread($resource, 8192);
 
             // If we have new data, reset the timer and append
             if ($new) {
                 $data .= $new;
                 $start = microtime(true);
 
-                if ($normalise_line_endings) {
+                if ($normalise_oel) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
             }
@@ -314,19 +312,19 @@ class Shell
      * Send a command to the server and receive it's response
      *
      * @param string $command
-     * @param bool   $trim                   Trim the command echo and PS1 marker from the response
-     * @param int    $timeout                Time in seconds to return if there is no new content
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param bool   $trim          Trim the command echo and PS1 marker from the response
+     * @param int    $timeout       Time in seconds to return if there is no new content
+     * @param bool   $normalise_eol Convert CRLF to LF
      * @return string
      */
-    public function sendSmartCommand($command, $trim = true, $timeout = 0, $normalise_line_endings = false)
+    public function sendSmartCommand($command, $trim = true, $timeout = 0, $normalise_eol = false)
     {
         if ($this->getSmartMarker() === null) {
             $this->setSmartConsole();
         }
 
         $this->sendln($command);
-        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_line_endings);
+        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_eol);
 
         return $trim ? trim(substr($response, strlen($command) + 1, -strlen($this->getSmartMarker()))) : $response;
     }
