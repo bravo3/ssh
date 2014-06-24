@@ -3,6 +3,7 @@ namespace SSH;
 
 use Bravo3\SSH\Connection;
 use Bravo3\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\Enum\ShellType;
 use Bravo3\SSH\Shell;
 use Bravo3\SSH\Terminal;
 
@@ -49,7 +50,7 @@ class ShellTest extends \PHPUnit_Framework_TestCase
         $this->assertNotEmpty($shell->waitForContent());
 
         $shell->sendln("echo -`whoami`-");
-        $this->assertContains('-'.\properties::$user.'-', $shell->waitForContent());
+        $this->assertContains('-'.\properties::$user.'-', $shell->waitForContent()->getAll());
     }
 
     /**
@@ -60,16 +61,17 @@ class ShellTest extends \PHPUnit_Framework_TestCase
     {
         $shell = $this->getShell();
         $shell_type = $shell->getShellType();
-        var_dump($shell_type);
+        $this->assertFalse($shell_type == ShellType::UNKNOWN());
 
         // Test for command result, trimmed
-        $this->assertEquals('-'.\properties::$user.'-', $shell->sendSmartCommand("echo -`whoami`-"));
+        $this->assertEquals('-'.\properties::$user.'-', $shell->sendSmartCommand("echo -`whoami`-")->getAll());
 
         // Test chaining commands works, no trimming
         $response = $shell->sendSmartCommand("ls -lah", false);
-        $this->assertNotEmpty($response);
-        $this->assertContains('ls -lah', $response); // should contain command echo
-        $this->assertContains($shell->getSmartMarker(), $response); // should contain PS1 marker
+        $all = $response->getAll();
+        $this->assertNotEmpty($all);
+        $this->assertContains('ls -lah', $all); // should contain command echo
+        $this->assertContains($shell->getSmartMarker(), $all); // should contain PS1 marker
     }
 
     /**
@@ -79,12 +81,14 @@ class ShellTest extends \PHPUnit_Framework_TestCase
     public function testRegex()
     {
         $shell = $this->getShell();
-        $this->assertNotEmpty($shell->waitForContent());
+        $this->assertNotEmpty($shell->waitForContent()->getAll());
 
         $shell->sendln("echo -`whoami`-");
         $response = $shell->readUntilExpression('/\-'.\properties::$user.'\-/i');
-        $this->assertContains('-'.\properties::$user.'-', $response);
-        $this->assertGreaterThan(strlen(\properties::$user) + 2, strlen($response));    // should contain echo/PS1
+        $this->assertContains('-'.\properties::$user.'-', $response->getAll());
+
+        // should contain echo/PS1
+        $this->assertGreaterThan(strlen(\properties::$user) + 2, strlen($response->getAll()));
     }
 
     /**
@@ -94,12 +98,34 @@ class ShellTest extends \PHPUnit_Framework_TestCase
     public function testMarker()
     {
         $shell = $this->getShell();
-        $this->assertNotEmpty($shell->waitForContent());
+        $this->assertNotEmpty($shell->waitForContent()->getAll());
 
         $shell->sendln("echo -`whoami`-");
         $response = $shell->readUntilMarker('-'.\properties::$user.'-');
-        $this->assertContains('-'.\properties::$user.'-', $response);
-        $this->assertGreaterThan(strlen(\properties::$user) + 2, strlen($response));    // should contain echo/PS1
+        $this->assertContains('-'.\properties::$user.'-', $response->getAll());
+
+        // should contain echo/PS1
+        $this->assertGreaterThan(strlen(\properties::$user) + 2, strlen($response->getAll()));
+    }
+
+    /**
+     * @medium
+     * @group server
+     */
+    public function testStdErr()
+    {
+        $shell = $this->getShell();
+        $this->assertNotEmpty($shell->waitForContent(1)->getAll());
+
+        $shell->sendln("rm fakefile");
+        $response = $shell->readUntilPause(0.5);
+
+        echo "\n";
+        foreach ($response as $line) {
+            $data = str_replace("\r\n", "\\n", $line[1]);
+            $data = str_replace("\n", "\\n", $data);
+            echo (($line[0] == 0) ? '| ' : '+ ').$data."\n";
+        }
 
     }
 

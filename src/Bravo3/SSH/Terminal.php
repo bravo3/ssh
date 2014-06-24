@@ -48,7 +48,7 @@ class Terminal
         $width = 80,
         $height = 25,
         $dimension_unit_type = TerminalUnit::CHARACTERS,
-        $terminal_type = TerminalType::XTERM,
+        $terminal_type = TerminalType::VT102,
         $env = []
     ) {
         $this->width               = $width;

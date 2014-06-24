@@ -23,10 +23,12 @@ Usage
 
 History
 =======
-1.4.2
+1.5.0
 -----
+* Shell functions now always return structured Output objects
+    * NB: This will break pre-1.5 code!
 * Extended the timeout and normalise options to smart commands
-* Added the ability to read from stderr only
+* Added the ability to read from stderr
 
 1.4.1
 -----

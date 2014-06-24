@@ -5,6 +5,7 @@ use Bravo3\SSH\Enum\ShellType;
 use Bravo3\SSH\Enum\StreamType;
 use Bravo3\SSH\Exceptions\NotAuthenticatedException;
 use Bravo3\SSH\Exceptions\NotConnectedException;
+use Bravo3\SSH\Exceptions\UnsupportedException;
 use Eloquent\Enumeration\Exception\UndefinedMemberException;
 
 /**
@@ -12,8 +13,7 @@ use Eloquent\Enumeration\Exception\UndefinedMemberException;
  */
 class Shell
 {
-    const STREAM_STDIO  = 0;
-    const STREAM_STDERR = 1;
+    const READ_SIZE = 8192;
 
     /**
      * @var Connection
@@ -85,21 +85,27 @@ class Shell
      *
      * @param int        $count   Number of bytes to read
      * @param int        $timeout Time in seconds to return if there is no new content
-     * @param StreamType $stream  Stream to read from, STDIO if omitted
-     * @return string
+     * @param StreamType $stream  Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
     public function readBytes($count, $timeout = 0, StreamType $stream = null)
     {
-        $data     = '';
-        $start    = microtime(true);
-        $resource = $this->getResourceForStream($stream);
+        $data      = new Output();
+        $start     = microtime(true);
+        $resources = $this->getResourcesForStream($stream);
 
-        while ((strlen($data) < $count) && ($timeout == 0 || (microtime(true) - $start < $timeout))) {
-            $new = fread($resource, $count - strlen($data));
+        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
+            foreach ($resources as $channel => $resource) {
+                $new = fread($resource, $count - strlen($data));
 
-            if ($new) {
-                $data .= $new;
-                $start = microtime(true);
+                if ($new) {
+                    $data->add($channel, $new);
+                    $start = microtime(true);
+                }
+
+                if ($data->getCombinedSize() >= $count) {
+                    break 2;
+                }
             }
         }
 
@@ -109,30 +115,35 @@ class Shell
     /**
      * Read until a string marker is detected *anywhere in the response*
      *
-     * @param string $marker        A string to stop reading once found in the output
-     * @param int    $timeout       Time in seconds to return if there is no new content
-     * @param bool   $normalise_eol Convert CRLF to LF
-     * @return string
+     * Will return a string if a single stream is requested, else an Output object.
+     *
+     * @param string     $marker        A string to stop reading once found in the output
+     * @param int        $timeout       Time in seconds to return if there is no new content
+     * @param bool       $normalise_eol Convert CRLF to LF
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
     public function readUntilMarker($marker, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
     {
-        $data     = '';
-        $start    = microtime(true);
-        $resource = $this->getResourceForStream($stream);
+        $data      = new Output();
+        $start     = microtime(true);
+        $resources = $this->getResourcesForStream($stream);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($resource, 8192);
+            foreach ($resources as $channel => $resource) {
+                $new = fread($resource, self::READ_SIZE);
 
-            if ($new) {
-                $data .= $new;
-                $start = microtime(true);
+                if ($new) {
+                    if ($normalise_eol) {
+                        $new = str_replace("\r\n", "\n", $new);
+                    }
 
-                if ($normalise_eol) {
-                    $data = str_replace("\r\n", "\n", $data);
-                }
+                    $data->add($channel, $new);
+                    $start = microtime(true);
 
-                if (strpos($data, $marker) !== false) {
-                    break;
+                    if (strpos($data->getAll(), $marker) !== false) {
+                        break 2;
+                    }
                 }
             }
         }
@@ -149,30 +160,31 @@ class Shell
      * @param string     $marker        A string to stop reading once found at the end of the output
      * @param int        $timeout       Time in seconds to return if there is no new content
      * @param bool       $normalise_eol Convert CRLF to LF
-     * @param StreamType $stream
-     * @return string
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
     public function readUntilEndMarker($marker, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
     {
-        $data       = '';
+        $data       = new Output();
         $start      = microtime(true);
         $marker_len = strlen($marker);
-        $resource   = $this->getResourceForStream($stream);
+        $resources  = $this->getResourcesForStream($stream);
 
-        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($resource, 8192);
+        while (($timeout == 0) || (microtime(true) - $start < $timeout)) {
+            foreach ($resources as $channel => $resource) {
+                $new = fread($resource, self::READ_SIZE);
 
-            if ($new) {
-                $data .= $new;
-                $start = microtime(true);
+                if ($new) {
+                    if ($normalise_eol) {
+                        $new = str_replace("\r\n", "\n", $new);
+                    }
 
-                if ($normalise_eol) {
-                    $data = str_replace("\r\n", "\n", $data);
-                }
+                    $data->add($channel, $new);
+                    $start = microtime(true);
 
-
-                if (substr($data, -$marker_len) == $marker) {
-                    break;
+                    if (substr($data->getAll(), -$marker_len) == $marker) {
+                        break 2;
+                    }
                 }
             }
         }
@@ -183,30 +195,33 @@ class Shell
     /**
      * Read until a regex is matched
      *
-     * @param string $regex
-     * @param int    $timeout       Time in seconds to return if there is no new content
-     * @param bool   $normalise_eol Convert CRLF to LF
-     * @return string
+     * @param string     $regex
+     * @param int        $timeout       Time in seconds to return if there is no new content
+     * @param bool       $normalise_eol Convert CRLF to LF
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
     public function readUntilExpression($regex, $timeout = 0, $normalise_eol = false, StreamType $stream = null)
     {
-        $data     = '';
-        $start    = microtime(true);
-        $resource = $this->getResourceForStream($stream);
+        $data      = new Output();
+        $start     = microtime(true);
+        $resources = $this->getResourcesForStream($stream);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($resource, 8192);
+            foreach ($resources as $channel => $resource) {
+                $new = fread($resource, self::READ_SIZE);
 
-            if ($new) {
-                $data .= $new;
-                $start = microtime(true);
+                if ($new) {
+                    if ($normalise_eol) {
+                        $new = str_replace("\r\n", "\n", $new);
+                    }
 
-                if ($normalise_eol) {
-                    $data = str_replace("\r\n", "\n", $data);
-                }
+                    $data->add($channel, $new);
+                    $start = microtime(true);
 
-                if (preg_match_all($regex, $data) > 0) {
-                    break;
+                    if (preg_match_all($regex, $data->getAll()) > 0) {
+                        break 2;
+                    }
                 }
             }
         }
@@ -217,26 +232,29 @@ class Shell
     /**
      * Keep reading until there is no new data for a specified length of time
      *
-     * @param float $delay         Time in seconds to return if there is no new content
-     * @param bool  $normalise_oel Convert CRLF to LF
-     * @return string
+     * @param float      $delay         Time in seconds to return if there is no new content
+     * @param bool       $normalise_oel Convert CRLF to LF
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
     public function readUntilPause($delay = 1.0, $normalise_oel = false, StreamType $stream = null)
     {
-        $data     = '';
-        $start    = microtime(true);
-        $resource = $this->getResourceForStream($stream);
+        $data      = new Output();
+        $start     = microtime(true);
+        $resources = $this->getResourcesForStream($stream);
 
         while (microtime(true) - $start < $delay) {
-            $new = fread($resource, 8192);
+            foreach ($resources as $channel => $resource) {
+                $new = fread($resource, self::READ_SIZE);
 
-            // If we have new data, reset the timer and append
-            if ($new) {
-                $data .= $new;
-                $start = microtime(true);
+                // If we have new data, reset the timer and append
+                if ($new) {
+                    if ($normalise_oel) {
+                        $new = str_replace("\r\n", "\n", $new);
+                    }
 
-                if ($normalise_oel) {
-                    $data = str_replace("\r\n", "\n", $data);
+                    $data->add($channel, $new);
+                    $start = microtime(true);
                 }
             }
         }
@@ -247,14 +265,17 @@ class Shell
     /**
      * Wait for content to be sent and then read until there is a pause
      *
-     * @param float      $delay
-     * @param bool       $normalise_oel
-     * @param StreamType $stream
-     * @return string
+     * @param float      $delay         Time in seconds to return if there is no new content
+     * @param bool       $normalise_oel Convert CRLF to LF
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @param int        $timeout       Timeout in seconds before giving up waiting for content
+     * @return Output
      */
-    public function waitForContent($delay = 0.1, $normalise_oel = false, StreamType $stream = null)
+    public function waitForContent($delay = 0.1, $normalise_oel = false, StreamType $stream = null, $timeout = 0.0)
     {
-        return $this->readBytes(1).$this->readUntilPause($delay, $normalise_oel);
+        $pre  = $this->readBytes(1, $timeout, $stream);
+        $post = $this->readUntilPause($delay, $normalise_oel);
+        return new Output(array_merge($pre->getBuffer(), $post->getBuffer()));
     }
 
     /**
@@ -305,28 +326,65 @@ class Shell
                 break;
         }
 
-        $this->readUntilEndMarker($this->smart_marker);
+        $this->readUntilEndMarker($this->smart_marker, 15.0);
     }
 
     /**
      * Send a command to the server and receive it's response
      *
-     * @param string $command
-     * @param bool   $trim          Trim the command echo and PS1 marker from the response
-     * @param int    $timeout       Time in seconds to return if there is no new content
-     * @param bool   $normalise_eol Convert CRLF to LF
-     * @return string
+     * @param string     $command
+     * @param bool       $trim          Trim the command echo and PS1 marker from the response
+     * @param int        $timeout       Time in seconds to return if there is no new content
+     * @param bool       $normalise_eol Convert CRLF to LF
+     * @param StreamType $stream        Stream to read from, StreamType::COMBINED() if omitted
+     * @return Output
      */
-    public function sendSmartCommand($command, $trim = true, $timeout = 0, $normalise_eol = false)
-    {
+    public function sendSmartCommand(
+        $command,
+        $trim = true,
+        $timeout = 0,
+        $normalise_eol = false,
+        StreamType $stream = null
+    ) {
         if ($this->getSmartMarker() === null) {
             $this->setSmartConsole();
         }
 
         $this->sendln($command);
-        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_eol);
+        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_eol, $stream);
 
-        return $trim ? trim(substr($response, strlen($command) + 1, -strlen($this->getSmartMarker()))) : $response;
+        if ($trim) {
+            $buffer      = [];
+            $buffer_size = count($response->getBuffer());
+            foreach ($response as $index => $line) {
+                $channel = $line[0];
+                $data    = $line[1];
+
+                // Trim command echo
+                if ($channel == StreamType::STDIO && $index == 0) {
+                    if (substr($data, 0, strlen($command)) == $command) {
+                        $data = substr($data, strlen($command) + 1);
+                    }
+
+                    $data = ltrim($data);
+                }
+
+                // Trim PS1/prompt
+                if ($channel == StreamType::STDIO && $index == ($buffer_size - 1)) {
+                    if (substr($data, -strlen($this->getSmartMarker())) == $this->getSmartMarker()) {
+                        $data = substr($data, 0, -strlen($this->getSmartMarker()));
+                    }
+
+                    $data = rtrim($data);
+                }
+
+                $buffer[] = [$channel, $data];
+            }
+
+            $response = new Output($buffer);
+        }
+
+        return $response;
     }
 
     /**
@@ -363,6 +421,10 @@ class Shell
     /**
      * Resolve the shell type
      *
+     * This function will send a command to the remote host, if the shell isn't ready for input then this might not
+     * be a quick function call. A default timeout safeguards against hangs - to improve this, ensure the shell is
+     * ready for commands.
+     *
      * @param float $timeout
      * @return ShellType
      */
@@ -397,19 +459,21 @@ class Shell
     }
 
     /**
-     * Return the correct resource for a StreamType
+     * Return an array of required resources against their channel index
      *
      * @param StreamType $stream
-     * @return resource
+     * @return array<int, resource>
      */
-    protected function getResourceForStream(StreamType $stream = null)
+    protected function getResourcesForStream(StreamType $stream = null)
     {
         switch ($stream) {
-            default:
             case StreamType::STDIO():
-                return $this->resource;
+                return [StreamType::STDIO => $this->resource];
             case StreamType::STDERR():
-                return $this->std_err;
+                return [StreamType::STDERR => $this->std_err];
+            default:
+            case StreamType::COMBINED():
+                return [StreamType::STDERR => $this->std_err, StreamType::STDIO => $this->resource];
         }
     }
 
