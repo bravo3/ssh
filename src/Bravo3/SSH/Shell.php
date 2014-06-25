@@ -11,6 +11,7 @@ use Eloquent\Enumeration\Exception\UndefinedMemberException;
  */
 class Shell
 {
+    const READ_SIZE = 8192;
 
     /**
      * @var Connection
@@ -99,7 +100,7 @@ class Shell
         $data = '';
 
         do {
-            $new = fread($this->resource, 8192);
+            $new = fread($this->resource, self::READ_SIZE);
 
             if ($new) {
                 $data .= $new;
@@ -123,7 +124,8 @@ class Shell
      * NB: This will not be matched if a single packet sends the marker and additional content,
      *     The marker must be at the end of a packet, eg. the PS1 marker waiting for a new command
      *
-     * @param string $marker A marker to stop reading when found
+     * @param string $marker                 A marker to stop reading when found
+     * @param int    $timeout                Time in seconds before giving up waiting for new content to match
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
@@ -133,7 +135,7 @@ class Shell
         $start = microtime(true);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($this->resource, 8192);
+            $new = fread($this->resource, self::READ_SIZE);
 
             if ($new) {
                 $data .= $new;
@@ -156,7 +158,7 @@ class Shell
      * Read until a regex is matched
      *
      * @param string $regex
-     * @param int    $timeout Pause timeout in seconds
+     * @param int    $timeout                Time in seconds before giving up waiting for new content to match
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
@@ -166,7 +168,7 @@ class Shell
         $start = microtime(true);
 
         while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
-            $new = fread($this->resource, 8192);
+            $new = fread($this->resource, self::READ_SIZE);
 
             if ($new) {
                 $data .= $new;
@@ -188,8 +190,8 @@ class Shell
     /**
      * Keep reading until there is no new data for a specified length of time
      *
-     * @param float $delay
-     * @param bool   $normalise_line_endings Convert CRLF to LF
+     * @param float $delay                  Time in seconds of no new content before returning
+     * @param bool  $normalise_line_endings Convert CRLF to LF
      * @return string
      */
     public function readUntilPause($delay = 1.0, $normalise_line_endings = false)
@@ -198,7 +200,7 @@ class Shell
         $start = microtime(true);
 
         while (microtime(true) - $start < $delay) {
-            $new = fread($this->resource, 8192);
+            $new = fread($this->resource, self::READ_SIZE);
 
             // If we have new data, reset the timer and append
             if ($new) {
@@ -218,9 +220,10 @@ class Shell
      * Wait for content to be sent and then read until there is a pause
      *
      * @param float $delay
+     * @param bool  $normalise_line_endings
      * @return string
      */
-    public function waitForContent($delay = 0.1, $normalise_line_endings = false)
+    public function waitForContent($delay = 1.0, $normalise_line_endings = false)
     {
         return $this->readBytes(1).$this->readUntilPause($delay, $normalise_line_endings);
     }
@@ -251,8 +254,9 @@ class Shell
      *
      * @param string    $marker     Leave blank to use a random marker
      * @param ShellType $shell_type Will auto-detect is omitted
+     * @param int       $timeout    Time in seconds before giving up waiting for a response
      */
-    public function setSmartConsole($marker = null, ShellType $shell_type = null)
+    public function setSmartConsole($marker = null, ShellType $shell_type = null, $timeout = 15)
     {
         // Set the smart marker with a timestamp to keep it unique from any references, etc
         $this->smart_marker = $marker ? : '#:MKR#'.time().'$';
@@ -273,24 +277,26 @@ class Shell
                 break;
         }
 
-        $this->readUntilEndMarker($this->smart_marker);
+        $this->readUntilEndMarker($this->smart_marker, $timeout);
     }
 
     /**
      * Send a command to the server and receive it's response
      *
      * @param string $command
-     * @param bool   $trim Trim the command echo and PS1 marker from the response
+     * @param bool   $trim                   Trim the command echo and PS1 marker from the response
+     * @param int    $timeout                Time in seconds to give up waiting for new content
+     * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function sendSmartCommand($command, $trim = true)
+    public function sendSmartCommand($command, $trim = true, $timeout = 0, $normalise_line_endings = false)
     {
         if ($this->getSmartMarker() === null) {
             $this->setSmartConsole();
         }
 
         $this->sendln($command);
-        $response = $this->readUntilEndMarker($this->getSmartMarker());
+        $response = $this->readUntilEndMarker($this->getSmartMarker(), $timeout, $normalise_line_endings);
 
         return $trim ? trim(substr($response, strlen($command) + 1, -strlen($this->getSmartMarker()))) : $response;
     }
