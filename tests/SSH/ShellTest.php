@@ -2,7 +2,9 @@
 namespace SSH;
 
 use Bravo3\SSH\Connection;
+use Bravo3\SSH\Credentials\KeyCredential;
 use Bravo3\SSH\Credentials\PasswordCredential;
+use Bravo3\SSH\Enum\ShellType;
 use Bravo3\SSH\Shell;
 use Bravo3\SSH\Terminal;
 
@@ -141,6 +143,17 @@ class ShellTest extends \PHPUnit_Framework_TestCase
         $shell->sendln("hello");
 
         $this->fail();
+    }
+
+    /**
+     * @medium
+     * @group server
+     */
+    public function testShellDetection()
+    {
+        $shell = $this->getShell();
+        $type = $shell->getShellType(3);
+        $this->assertFalse($type == ShellType::UNKNOWN());
     }
 
 

@@ -42,6 +42,14 @@ class Shell
     protected $shell_type;
 
     /**
+     * On some systems, commands may echo the user and IP address behind an escape sequence. By default we will
+     * detect and strip this out.
+     *
+     * @var bool
+     */
+    protected $strip_user_shadow = true;
+
+    /**
      * Typically called from Connection::getShell()
      *
      * @param Connection $connection
@@ -82,7 +90,6 @@ class Shell
         $data = '';
         while (strlen($data) < $count) {
             $data .= fread($this->resource, $count - strlen($data));
-
         }
 
         return $data;
@@ -108,6 +115,8 @@ class Shell
                 if ($normalise_line_endings) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
+
+                $this->stripUserShadow($data);
 
                 if (strpos($data, $marker) !== false) {
                     break;
@@ -145,6 +154,8 @@ class Shell
                     $data = str_replace("\r\n", "\n", $data);
                 }
 
+                $this->stripUserShadow($data);
+
                 if (substr($data, -strlen($marker)) == $marker) {
                     break;
                 }
@@ -178,6 +189,8 @@ class Shell
                     $data = str_replace("\r\n", "\n", $data);
                 }
 
+                $this->stripUserShadow($data);
+
                 if (preg_match_all($regex, $data) > 0) {
                     break;
                 }
@@ -210,6 +223,8 @@ class Shell
                 if ($normalise_line_endings) {
                     $data = str_replace("\r\n", "\n", $data);
                 }
+
+                $this->stripUserShadow($data);
             }
         }
 
@@ -355,6 +370,52 @@ class Shell
         }
 
         return $this->shell_type;
+    }
+
+    /**
+     * On some systems, commands may echo the user and IP address behind an escape sequence. By default we will
+     * detect and strip this out.
+     *
+     * @param boolean $strip_user_shadow
+     * @return $this
+     */
+    public function setStripUserShadow($strip_user_shadow)
+    {
+        $this->strip_user_shadow = $strip_user_shadow;
+        return $this;
+    }
+
+    /**
+     * On some systems, commands may echo the user and IP address behind an escape sequence. By default we will
+     * detect and strip this out.
+     *
+     * @return boolean
+     */
+    public function getStripUserShadow()
+    {
+        return $this->strip_user_shadow;
+    }
+
+    /**
+     * Detect a user shadow in the text and strip it
+     *
+     * This function will just return if $this->strip_user_shadow is false.
+     *
+     * @param string $str
+     */
+    protected function stripUserShadow(&$str)
+    {
+        if (!$this->strip_user_shadow) {
+            return;
+        }
+
+        if (strrpos($str, chr(7)) !== false) {
+            // Bell detected do a regex check
+            $match = null;
+            if (preg_match('/(.*)\e]0;.*\a(.*)/s', $str, $match)) {
+                $str = $match[1].$match[2];
+            }
+        }
     }
 
 }
