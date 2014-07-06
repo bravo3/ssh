@@ -82,14 +82,25 @@ class Shell
     /**
      * Read a given number of bytes - waiting until the count is matched
      *
-     * @param $count
+     * @param int   $count   Number of bytes to read
+     * @param float $timeout Time in seconds of no response to give up
      * @return string
      */
-    public function readBytes($count)
+    public function readBytes($count, $timeout = 0.0)
     {
-        $data = '';
+        $data  = '';
+        $start = microtime(true);
         while (strlen($data) < $count) {
-            $data .= fread($this->resource, $count - strlen($data));
+            $new = fread($this->resource, $count - strlen($data));
+            if ($new) {
+                $start = microtime(true);
+                $data .= $new;
+            }
+
+            // Timeout - return the current buffer
+            if ($timeout && (microtime(true) > ($start + $timeout))) {
+                return $data;
+            }
         }
 
         return $data;
@@ -99,18 +110,21 @@ class Shell
      * Read until a string marker is detected *anywhere in the response*
      *
      * @param string $marker
+     * @param float  $timeout                Time in seconds before giving up waiting for new content to match
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilMarker($marker, $normalise_line_endings = false)
+    public function readUntilMarker($marker, $timeout = 0.0, $normalise_line_endings = false)
     {
-        $data = '';
+        $data  = '';
+        $start = microtime(true);
 
-        do {
+        while ($timeout == 0 || (microtime(true) - $start < $timeout)) {
             $new = fread($this->resource, self::READ_SIZE);
 
             if ($new) {
                 $data .= $new;
+                $start = microtime(true);
 
                 if ($normalise_line_endings) {
                     $data = str_replace("\r\n", "\n", $data);
@@ -122,7 +136,7 @@ class Shell
                     break;
                 }
             }
-        } while (true);
+        }
 
         return $data;
     }
@@ -134,11 +148,11 @@ class Shell
      *     The marker must be at the end of a packet, eg. the PS1 marker waiting for a new command
      *
      * @param string $marker                 A marker to stop reading when found
-     * @param int    $timeout                Time in seconds before giving up waiting for new content to match
+     * @param float  $timeout                Time in seconds before giving up waiting for new content to match
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilEndMarker($marker, $timeout = 0, $normalise_line_endings = false)
+    public function readUntilEndMarker($marker, $timeout = 0.0, $normalise_line_endings = false)
     {
         $data  = '';
         $start = microtime(true);
@@ -169,11 +183,11 @@ class Shell
      * Read until a regex is matched
      *
      * @param string $regex
-     * @param int    $timeout                Time in seconds before giving up waiting for new content to match
+     * @param float  $timeout                Time in seconds before giving up waiting for new content to match
      * @param bool   $normalise_line_endings Convert CRLF to LF
      * @return string
      */
-    public function readUntilExpression($regex, $timeout = 0, $normalise_line_endings = false)
+    public function readUntilExpression($regex, $timeout = 0.0, $normalise_line_endings = false)
     {
         $data  = '';
         $start = microtime(true);
@@ -238,9 +252,9 @@ class Shell
      * @param bool  $normalise_line_endings
      * @return string
      */
-    public function waitForContent($delay = 1.0, $normalise_line_endings = false)
+    public function waitForContent($delay = 1.0, $timeout = 0.0, $normalise_line_endings = false)
     {
-        return $this->readBytes(1).$this->readUntilPause($delay, $normalise_line_endings);
+        return $this->readBytes(1, $timeout).$this->readUntilPause($delay, $normalise_line_endings);
     }
 
     /**
@@ -348,7 +362,7 @@ class Shell
             return $this->shell_type;
         }
 
-        $this->waitForContent(1);
+        $this->readyShell($timeout);
         $this->sendln("echo $0");
 
         $regex = '/echo \$0$\n^(\-[a-z]+)/sm';
@@ -370,6 +384,18 @@ class Shell
         }
 
         return $this->shell_type;
+    }
+
+    /**
+     * Tests the shell is responsive and waits for it to become idle, discarding anything in its buffer
+     *
+     * @param float $timeout
+     * @return bool Returns true untill the timeout is hit waiting for a response from the shell
+     */
+    public function readyShell($timeout = 15.0)
+    {
+        $this->sendln("#");
+        return (bool)$this->waitForContent(1, $timeout);
     }
 
     /**
