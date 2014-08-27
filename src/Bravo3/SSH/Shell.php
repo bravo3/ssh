@@ -306,7 +306,8 @@ class Shell
                 break;
         }
 
-        $this->readUntilEndMarker($this->smart_marker, $timeout);
+        //$this->readUntilEndMarker($this->smart_marker, $timeout);
+        $this->waitForContent(1, $timeout);
     }
 
     /**
